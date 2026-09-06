@@ -94,11 +94,3 @@ hook.Add("StartCommand", "reloadfloorweapon", function(ply, cmd)
 		cmd:RemoveKey(IN_JUMP)
     end
 end)
-
-function SWEP:PreDrawViewModel()
-	return true
-end
-
-function SWEP:ViewModelDrawn()
-	return false
-end

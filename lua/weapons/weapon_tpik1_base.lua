@@ -248,13 +248,3 @@ end
 
 function SWEP:AddDrawModel(ent)
 end
-
-if CLIENT then
-	function SWEP:PreDrawViewModel()
-		return true
-	end
-
-	function SWEP:ViewModelDrawn()
-		return false
-	end
-end

@@ -2,7 +2,7 @@ MODE.name = "criresp"
 MODE.PrintName = "Crisis Response"
 
 MODE.ForBigMaps = false
-MODE.ROUND_TIME = 1200
+MODE.ROUND_TIME = 480
 MODE.Chance = 0.05
 MODE.start_time = 90
 MODE.end_time = 9
@@ -163,26 +163,19 @@ function MODE:Intermission()
 	end)
 end
 
-local function IsCombatant(ply)
-	if not ply:Alive() then return false end
-	if ply:GetNetVar("handcuffed", false) then return false end
-	if ply.organism and ply.organism.incapacitated then return false end
-	return true
-end
-
 function MODE:CheckAlivePlayers()
 	local swatPlayers = {}
 	local banditPlayers = {}
 
 	for _, ply in ipairs(team.GetPlayers(0)) do
 		if ply.criresp_sniper then continue end
-		if IsCombatant(ply) then
+		if ply:Alive() and not ply:GetNetVar("handcuffed", false) then
 			table.insert(swatPlayers, ply)
 		end
 	end
 
 	for _, ply in ipairs(team.GetPlayers(1)) do
-		if IsCombatant(ply) then
+		if ply:Alive() and not ply:GetNetVar("handcuffed", false) then
 			table.insert(banditPlayers, ply)
 		end
 	end
@@ -291,19 +284,14 @@ local function SpawnSWAT(ply, swatPlayers)
 	local gun = ply:Give(primary.wep)
 	if IsValid(gun) and gun.GetMaxClip1 then
 		hg.AddAttachmentForce(ply, gun, primary.atts)
-		ply:GiveAmmo(gun:GetMaxClip1() * 6, gun:GetPrimaryAmmoType(), true)
+		ply:GiveAmmo(gun:GetMaxClip1() * 3, gun:GetPrimaryAmmoType(), true)
 	else
 		print("WTH???")
 	end
 
 	local gun = ply:Give("weapon_glock17")
 	if IsValid(gun) and gun.GetMaxClip1 then
-		ply:GiveAmmo(gun:GetMaxClip1() * 4, gun:GetPrimaryAmmoType(), true)
-	end
-
-	local taser = ply:Give("weapon_taser")
-	if IsValid(taser) then
-		ply:GiveAmmo(5, taser:GetPrimaryAmmoType(), true)
+		ply:GiveAmmo(gun:GetMaxClip1() * 3, gun:GetPrimaryAmmoType(), true)
 	end
 
 	ply:Give("weapon_handcuffs")
@@ -320,12 +308,7 @@ local function SpawnSWAT(ply, swatPlayers)
 			shieldGiven = true
 		end
 
-		local wep = ply:Give(gear.item)
-
-		if gear.item == "weapon_bloodbag" and IsValid(wep) and wep.modeValues then
-			wep.modeValues[1] = 1
-			wep.bloodtype = "o-"
-		end
+		ply:Give(gear.item)
 	end
 
 	ply:Give("weapon_hands_sh")
@@ -369,7 +352,7 @@ local function SpawnSniper(ply)
 
 	local gun = ply:Give("weapon_m98b")
 	if IsValid(gun) and gun.GetMaxClip1 then
-		ply:GiveAmmo(gun:GetMaxClip1() * 5, gun:GetPrimaryAmmoType(), true)
+		ply:GiveAmmo(gun:GetMaxClip1() * 3, gun:GetPrimaryAmmoType(), true)
 	end
 
 	ply:Give("weapon_bandage_sh")
@@ -382,37 +365,27 @@ local function SpawnSniper(ply)
 end
 
 
-local sniperZones = {}
-local sniperZoneNames = {"SNIPERZONE_CRI", "SNIPERZONE_CRI2", "SNIPERZONE_CRI3", "SNIPERZONE_CRI4"}
+local sniperZone = nil
 
-local function BuildSniperZones()
-	table.Empty(sniperZones)
+local function BuildSniperZone()
+	sniperZone = nil
 
-	for _, name in ipairs(sniperZoneNames) do
-		local pts = zb.GetMapPoints(name)
-		if not pts or #pts < 2 then continue end
+	local pts = zb.GetMapPoints("SNIPERZONE_CRI")
+	if not pts or #pts < 2 then return end
 
-		local mins = Vector(math.huge, math.huge, math.huge)
-		local maxs = Vector(-math.huge, -math.huge, -math.huge)
+	local mins = Vector(math.huge, math.huge, math.huge)
+	local maxs = Vector(-math.huge, -math.huge, -math.huge)
 
-		for _, pnt in pairs(pts) do
-			if not pnt.pos then continue end
-			mins.x, mins.y, mins.z = math.min(mins.x, pnt.pos.x), math.min(mins.y, pnt.pos.y), math.min(mins.z, pnt.pos.z)
-			maxs.x, maxs.y, maxs.z = math.max(maxs.x, pnt.pos.x), math.max(maxs.y, pnt.pos.y), math.max(maxs.z, pnt.pos.z)
-		end
-
-		mins.z = mins.z - 96
-		maxs.z = maxs.z + 160
-
-		table.insert(sniperZones, {mins, maxs})
+	for _, pnt in pairs(pts) do
+		if not pnt.pos then continue end
+		mins.x, mins.y, mins.z = math.min(mins.x, pnt.pos.x), math.min(mins.y, pnt.pos.y), math.min(mins.z, pnt.pos.z)
+		maxs.x, maxs.y, maxs.z = math.max(maxs.x, pnt.pos.x), math.max(maxs.y, pnt.pos.y), math.max(maxs.z, pnt.pos.z)
 	end
-end
 
-local function InSniperZone(pos)
-	for _, zone in ipairs(sniperZones) do
-		if pos:WithinAABox(zone[1], zone[2]) then return true end
-	end
-	return false
+	mins.z = mins.z - 96
+	maxs.z = maxs.z + 160
+
+	sniperZone = {mins, maxs}
 end
 
 local function GetBody(ply)
@@ -480,12 +453,12 @@ local function SniperShot(ply)
 end
 
 local function SniperZoneThink()
-	if #sniperZones == 0 then return end
+	if not sniperZone then return end
 
 	local outside = {}
 	for _, ply in ipairs(team.GetPlayers(1)) do
 		if not ply:Alive() or ply:GetNetVar("handcuffed", false) then continue end
-		if InSniperZone(GetBody(ply):GetPos()) then continue end
+		if GetBody(ply):GetPos():WithinAABox(sniperZone[1], sniperZone[2]) then continue end
 		table.insert(outside, ply)
 	end
 
@@ -541,7 +514,7 @@ function MODE:RoundStart()
 		end
 	end)
 
-	BuildSniperZones()
+	BuildSniperZone()
 	timer.Create("criresp_sniperzone", 0.5, 0, function()
 		if zb.CROUND ~= "criresp" or zb.ROUND_STATE ~= 1 then return end
 		SniperZoneThink()
@@ -564,7 +537,7 @@ end
 function MODE:EndRound()
 	timer.Remove("criresp_readysync")
 	timer.Remove("criresp_sniperzone")
-	table.Empty(sniperZones)
+	sniperZone = nil
 	sniperPly = nil
 
 	for k, ply in player.Iterator() do
