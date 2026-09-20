@@ -2,6 +2,7 @@ local hide = {
 	["CHudHealth"] = true,
 	["CHudBattery"] = true,
 	["CHudSecondaryAmmo"] = true,
+	["CHudAmmo"] = true,
 	["CHudCrosshair"] = true,
 	["CHudDamageIndicator"] = true,
 	["CHudGeiger"] = true,
@@ -185,9 +186,9 @@ end
 
 hg.radialOptions = hg.radialOptions or {}
 local colBlack = Color(0, 0, 0, 152)
-local colOption = Color(40, 0, 55, 152)
+local colOption = Color(30, 30, 30, 180)
 local colWhite = Color(255, 255, 255, 255)
-local colWhiteTransparent = Color(176, 40, 40, 100)
+local colWhiteTransparent = Color(210, 210, 210, 120)
 local colTransparent = Color(0, 0, 0, 0)
 local matHuy = Material("vgui/white")
 local vecXY = Vector(0, 0)
@@ -275,9 +276,8 @@ local function CreateRadialMenu(options_arg, bAutoClose)
 		vecXY.x = x
 		vecXY.y = y
 		local deg = (vecXY:GetNormalized() - vecDown):Angle()
-		//deg[2] = deg[2] - 180
 		deg = math.NormalizeAngle((deg[2] - 180) * 2) + 180
-		
+
 		local options = {}
 		if paining then
 			options[#options + 1] = {function() RunConsoleCommand("hg_phrase") end, ""}
@@ -287,40 +287,62 @@ local function CreateRadialMenu(options_arg, bAutoClose)
 
 		sizePan = LerpFT( menuPanel:GetAlpha() > 100 and 0.05 or 0.25,sizePan,(menuPanel:GetAlpha()/255))
 		local viewLerp = Lerp(math.ease.OutExpo(sizePan),0,1)
-		for num, option in ipairs(options) do
+
+		local wedgeIndexes = {}
+		local centerIndex
+
+		for i, option in ipairs(options) do
+			if option.isCenter and not centerIndex then
+				centerIndex = i
+			else
+				wedgeIndexes[#wedgeIndexes + 1] = i
+			end
+		end
+
+		local wedgeCount = #wedgeIndexes
+		local r = scrH * (options_arg ~= nil and 0.4 or 0.45) * viewLerp
+		local sqrt = math.sqrt(x ^ 2 + y ^ 2)
+		local centerR = centerIndex and (r * 0.32) or 4
+		local effectiveR = (wedgeCount > 0) and r or (centerIndex and centerR or r)
+
+		isMouseOnRadial = sqrt <= effectiveR and sqrt > (centerIndex and 0 or centerR)
+
+		if centerIndex and sqrt <= centerR then
+			current_option = centerIndex
+		end
+
+		for num, realIndex in ipairs(wedgeIndexes) do
+			local option = options[realIndex]
 			local num = num - 1
 
-			local r = scrH * (options_arg ~= nil and 0.4 or 0.45) * viewLerp
-			local partDeg = 360 / #options
-			local sqrt = math.sqrt(x ^ 2 + y ^ 2)
-			isMouseOnRadial = sqrt <= r and sqrt > 4
-			isMouseIntersecting = isMouseOnRadial and deg > num * partDeg and deg < (num + 1) * partDeg
-			if isMouseIntersecting then current_option = num + 1 end
-			if sqrt > 0 and current_option > 0 and num and !intersect_xyPartDeg then return end
+			local partDeg = 360 / wedgeCount
+			local isMouseOnWedgeRing = sqrt <= r and sqrt > centerR
+			isMouseIntersecting = isMouseOnWedgeRing and deg > num * partDeg and deg < (num + 1) * partDeg
+			if isMouseIntersecting then current_option = realIndex end
 
 			optionSelected[num] = optionSelected[num] or 0
 			optionSelected[num] = LerpFT(0.1, optionSelected[num], isMouseIntersecting and 1 or 0)
 
-			if option[3] then --// Multibutton
+			if option[3] then
 				surface.SetMaterial(matHuy)
 				surface.SetDrawColor(isMouseIntersecting and colBlack or colBlack)
-				draw.CirclePart(w / 2, h / 2, r, 40, #options, num)
+				draw.CirclePart(w / 2, h / 2, r, 40, wedgeCount, num)
 				local count = #option[4]
-				
+
 				local selectedPart = count - (math.floor((r - sqrt) / (r / count)))
-				
+
 				current_option_select = selectedPart
 				for i, opt in pairs(option[4]) do
 					local selected = selectedPart == i
 					surface.SetMaterial(matHuy)
 					surface.SetDrawColor((selected and isMouseIntersecting) and colWhiteTransparent or colTransparent)
-					draw.CirclePart(w / 2, h / 2, r * (i / count), 40, #options, num)
+					draw.CirclePart(w / 2, h / 2, r * (i / count), 40, wedgeCount, num)
 					local a = -partDeg * num - partDeg / 2
 					a = math.rad(a) + math.pi
 
 					if paining then
 						math.randomseed(math.Round(CurTime() / 5 + num + i, 0))
-						opt = ""//hg.get_status_message(ply)
+						opt = ""
 						math.randomseed(os.time())
 					end
 
@@ -329,41 +351,41 @@ local function CreateRadialMenu(options_arg, bAutoClose)
 
 				continue
 			end
-			
-			--print(options_arg ~= nil and true or false)
+
 			surface.SetMaterial(matHuy)
-			if option[6] and IsColor(option[6]) then --// Custom color
-				if option[7] and IsColor(option[7]) then --// Custom select color
+			if option[6] and IsColor(option[6]) then
+				if option[7] and IsColor(option[7]) then
 					surface.SetDrawColor(option[7]:Lerp(option[6], 1 - optionSelected[num]))
 				else
 					surface.SetDrawColor(colWhiteTransparent:Lerp(option[6], 1 - optionSelected[num]))
 				end
 			else
-				if option[7] and IsColor(option[7]) then --// Custom select color
+				if option[7] and IsColor(option[7]) then
 					surface.SetDrawColor(option[7]:Lerp(options_arg ~= nil and colOption or colBlack, 1 - optionSelected[num]))
 				else
 					surface.SetDrawColor(colWhiteTransparent:Lerp(options_arg ~= nil and colOption or colBlack, 1 - optionSelected[num]))
 				end
 			end
 
-			draw.CirclePart(w / 2, h / 2, r * (1 + 0.1 * optionSelected[num]), 30, #options, num)
+			draw.CirclePart(w / 2, h / 2, r * (1 + 0.1 * optionSelected[num]), 30, wedgeCount, num)
 			local a = -partDeg * num - partDeg / 2
 			a = math.rad(a) + math.pi
 
-			--PrintTable(option)
-			if option[5] then --// Icon
-				local a = -partDeg * num - partDeg / 2
-				a = math.rad(a) + math.pi
-
+			if option[5] then
 				surface.SetMaterial(option[5])
 				surface.SetDrawColor(color_white)
-				local sizeW = scrW / 2.25 + math.sin(a) * r * 0.7
-				local sizeH = scrH / 2.2 + math.cos(a) * r * 0.7
-		
-				surface.DrawTexturedRect(sizeW, sizeH, scrW * 0.1, scrH * 0.1)
+				local iconH = scrH * 0.12
+				local iconW = iconH * 1.35
+				local iconX = scrW / 2 + math.sin(a) * r * 0.75
+				local iconY = scrH / 2 + math.cos(a) * r * 0.75
+
+				surface.DrawTexturedRect(iconX - iconW / 2, iconY - iconH / 2, iconW, iconH)
+
+				if option[2] and option[2] ~= "" then
+					draw.SimpleText(option[2], "HomigradFont", iconX, iconY - iconH / 2 - 4, colWhite, TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
+				end
 			else
-				local txt = option[2] --// Text
-				if txt and !options_old then return end
+				local txt = option[2]
 				if paining then
 					math.randomseed(math.Round(CurTime() / 5 + num, 0))
 					txt = hg.get_status_message(ply)
@@ -372,6 +394,31 @@ local function CreateRadialMenu(options_arg, bAutoClose)
 				draw.DrawText(txt, "HomigradFont", scrW / 2 + math.sin(a) * r * 0.75, scrH / 2 + math.cos(a) * r * 0.75, colWhite, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 			end
 		end
+
+		if centerIndex then
+			local option = options[centerIndex]
+			local isHovered = current_option == centerIndex and sqrt <= centerR
+
+			surface.SetMaterial(matHuy)
+			surface.SetDrawColor(isHovered and colWhiteTransparent or (options_arg ~= nil and colOption or colBlack))
+			draw.CirclePart(w / 2, h / 2, centerR, 40, 1, 0)
+
+			if option[5] then
+				surface.SetMaterial(option[5])
+				surface.SetDrawColor(color_white)
+				local iconH = centerR * 1.15
+				local iconW = iconH * 1.35
+
+				surface.DrawTexturedRect(scrW / 2 - iconW / 2, scrH / 2 - iconH / 2, iconW, iconH)
+
+				if option[2] and option[2] ~= "" then
+					draw.SimpleText(option[2], "HomigradFont", scrW / 2, scrH / 2 - iconH / 2 - 4, colWhite, TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
+				end
+			else
+				draw.DrawText(option[2] or "", "HomigradFont", scrW / 2, scrH / 2, colWhite, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			end
+		end
+
 		if !paining then
 			draw.SimpleText(lply:GetPlayerName(),"HomigradFontGigantoNormous",scrW * 0.0215* viewLerp,scrH * 0.042, colBack, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 			draw.SimpleText( ( (lply.role and lply.role.name) or ""),"HomigradFontGigantoNormous" ,scrW * 0.0215 * viewLerp,scrH * 0.098, colBack, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
@@ -379,10 +426,6 @@ local function CreateRadialMenu(options_arg, bAutoClose)
 			local col = lply:GetPlayerColor():ToColor()
 			draw.SimpleText(lply:GetPlayerName(),"HomigradFontGigantoNormous",scrW * 0.02 * viewLerp,scrH * 0.04, col, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 			draw.SimpleText( ( (lply.role and lply.role.name) or ""),"HomigradFontGigantoNormous" ,scrW * 0.02 * viewLerp,scrH * 0.095, lply.role and lply.role.color or incoentCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-			-- какой же тут говнокод все же...
-			-- local walkBtn = input.LookupBinding("+walk") or "BIND YOUR +WALK KEY PLEASE. WRITE \"bind alt +walk\" IN CONSOLE FOR THE LOVE OF GOD"
-			-- draw.SimpleText(walkBtn .. " | Misc", "HomigradFont", scrW * (0.981 + (0.04 * (1-viewLerp))),scrH * 0.9615, colBack, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
-			-- draw.SimpleText(walkBtn .. " | Misc", "HomigradFont", scrW * (0.98 + (0.04 * (1-viewLerp))),scrH * 0.96, colWhite, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 		end
 	end
 end
@@ -747,3 +790,113 @@ if game.SinglePlayer() then
 		draw.SimpleText("A lot of stuff won't work and we won't provide any fixes to singleplayer EVER", "HomigradFontMedium", ScrW() / 2,ScrH() * 7 / 12, nil,TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 	end)
 end
+
+local hg_ammohud = ConVarExists("hg_ammohud") and GetConVar("hg_ammohud") or CreateClientConVar("hg_ammohud", "1", true, false, "Toggle the Insurgency-style magazine ammo HUD", 0, 1)
+
+surface.CreateFont("HG_AmmoSpareFont", {
+	font = font(),
+	size = ScreenScale(8),
+	weight = 900,
+	outline = false
+})
+
+local ammohud_colBg        = Color(10, 10, 10, 210)
+local ammohud_colBorder    = Color(255, 255, 255, 70)
+local ammohud_colBgEmpty     = Color(60, 6, 10, 220)
+local ammohud_colBorderEmpty = Color(180, 20, 40, 255)
+local ammohud_colFill      = Color(235, 235, 235, 235)
+local ammohud_colFillLow   = Color(215, 45, 45, 235)
+local ammohud_colSpareFull = Color(230, 230, 230, 230)
+local ammohud_colSparePart = Color(230, 230, 230, 100)
+local ammohud_colTextLight = Color(240, 240, 240, 255)
+
+local AMMOHUD_MAX_SPARE_SQUARES = 5
+
+local function ammohud_LerpColor(frac, c1, c2)
+	return Color(
+		Lerp(frac, c1.r, c2.r),
+		Lerp(frac, c1.g, c2.g),
+		Lerp(frac, c1.b, c2.b),
+		Lerp(frac, c1.a, c2.a)
+	)
+end
+
+hook.Add("HUDPaint", "hg_insurgency_ammohud", function()
+	if not hg_ammohud:GetBool() then return end
+	if not IsValid(lply) or not lply:Alive() then return end
+	if lply.organism and lply.organism.otrub then return end
+	if lply:GetNetVar("disappearance", nil) then return end
+
+	local wep = lply:GetActiveWeapon()
+	if not IsValid(wep) or not ishgweapon(wep) then return end
+	if not wep.GetMaxClip1 or not wep.Clip1 then return end
+
+	local maxClip = wep:GetMaxClip1()
+	if maxClip <= 0 then return end
+
+	local clip = math.max(wep:Clip1(), 0)
+	local ammoType = wep.GetPrimaryAmmoType and wep:GetPrimaryAmmoType() or -1
+	local reserve = (ammoType and ammoType >= 0 and lply.GetAmmoCount) and lply:GetAmmoCount(ammoType) or 0
+
+	local spareFullMags = math.floor(reserve / maxClip)
+	local spareLeftover = reserve % maxClip
+
+	local sw, sh = ScrW(), ScrH()
+	local scale = sh / 1080
+
+	local boxWidth = math.max(38 * scale, 30)
+	local boxHeight = math.max(70 * scale, 54)
+	local gap = math.max(6 * scale, 3)
+	local spareSize = math.max(24 * scale, 18)
+
+	local x = sw - (220 * scale) - boxWidth
+	local y = sh - (150 * scale)
+
+	local visibleSpare = math.min(spareFullMags, AMMOHUD_MAX_SPARE_SQUARES)
+	local overflow = spareFullMags - visibleSpare
+	local totalPips = visibleSpare + (spareLeftover > 0 and 1 or 0)
+	local spareX = x - gap - spareSize
+
+	for i = 1, totalPips do
+		local py = y + boxHeight - (i * (spareSize + gap) - gap) - spareSize
+
+		draw.RoundedBox(2, spareX, py, spareSize, spareSize, ammohud_colBg)
+
+		if i <= visibleSpare then
+			surface.SetDrawColor(ammohud_colSpareFull)
+			surface.DrawRect(spareX + 2, py + 2, spareSize - 4, spareSize - 4)
+		else
+			local frac = spareLeftover / maxClip
+			local fillH = (spareSize - 4) * frac
+			surface.SetDrawColor(ammohud_colSparePart)
+			surface.DrawRect(spareX + 2, py + 2 + (spareSize - 4 - fillH), spareSize - 4, fillH)
+		end
+
+		surface.SetDrawColor(ammohud_colBorder)
+		surface.DrawOutlinedRect(spareX, py, spareSize, spareSize)
+	end
+
+	if overflow > 0 then
+		local py = y + boxHeight - ((totalPips + 1) * (spareSize + gap) - gap) - spareSize
+		draw.RoundedBox(2, spareX, py, spareSize, spareSize, ammohud_colBg)
+		surface.SetDrawColor(ammohud_colBorder)
+		surface.DrawOutlinedRect(spareX, py, spareSize, spareSize)
+		draw.SimpleText("+" .. overflow, "HG_AmmoSpareFont", spareX + spareSize / 2, py + spareSize / 2, ammohud_colTextLight, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+	end
+
+	local frac = math.Clamp(clip / maxClip, 0, 1)
+	local emptiness = 1 - frac
+	local boxBg = ammohud_LerpColor(emptiness, ammohud_colBg, ammohud_colBgEmpty)
+	local boxBorder = ammohud_LerpColor(emptiness, ammohud_colBorder, ammohud_colBorderEmpty)
+
+	draw.RoundedBox(3, x, y, boxWidth, boxHeight, boxBg)
+
+	local fillH = (boxHeight - 6) * frac
+	local isLow = clip <= math.max(1, math.ceil(maxClip * 0.2))
+
+	surface.SetDrawColor(isLow and ammohud_colFillLow or ammohud_colFill)
+	surface.DrawRect(x + 3, y + 3 + (boxHeight - 6 - fillH), boxWidth - 6, fillH)
+
+	surface.SetDrawColor(boxBorder)
+	surface.DrawOutlinedRect(x, y, boxWidth, boxHeight)
+end)

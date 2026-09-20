@@ -409,6 +409,12 @@ hg.ConVars = hg.ConVars or {}
 	}
 	local hg_sandboxmusic = ConVarExists("hg_sandboxmusic") and GetConVar("hg_sandboxmusic") or CreateConVar("hg_sandboxmusic", 0, FCVAR_REPLICATED + FCVAR_ARCHIVE, "Toggle dynamic music in sandbox gamemode", 0, 1)
 	local gamemod = engine.ActiveGamemode()
+	local hg_movement_runspeed = CreateConVar("hg_movement_runspeed", 390, FCVAR_REPLICATED + FCVAR_ARCHIVE + FCVAR_NOTIFY, "Changes run speed, old zcity default - 350", 0, 9999)
+	local hg_movement_walkspeed = CreateConVar("hg_movement_walkspeed", 100, FCVAR_REPLICATED + FCVAR_ARCHIVE + FCVAR_NOTIFY, "Changes walk speed, old zcity default - 100", 0, 9999)
+	local hg_movement_slowwalkspeed = CreateConVar("hg_movement_slowwalkspeed", 60, FCVAR_REPLICATED + FCVAR_ARCHIVE + FCVAR_NOTIFY, "Changes slowwalk speed, old zcity default - 60", 0, 9999)
+	local hg_movement_ladderclimbspeed = CreateConVar("hg_movement_ladderclimbspeed", 150, FCVAR_REPLICATED + FCVAR_ARCHIVE + FCVAR_NOTIFY, "Changes leader climb speed, old zcity default - 150", 0, 9999)
+	local hg_movement_crouchwalkspeed = CreateConVar("hg_movement_crouchwalkspeed", 60, FCVAR_REPLICATED + FCVAR_ARCHIVE + FCVAR_NOTIFY, "Changes crouch walk speed, default 60", 0, 9999)
+
 	hook.Add("player_spawn", "homigrad-spawn3", function(data)
 		local ply = Player(data.userid)
 		if not IsValid(ply) then return end
@@ -423,8 +429,8 @@ hg.ConVars = hg.ConVars or {}
 		timer.Simple(0, function()
 			if not IsValid(ply) then return end
 
-			ply:SetWalkSpeed(100)
-			ply:SetRunSpeed(350) -- 230
+			ply:SetWalkSpeed(hg_movement_walkspeed:GetInt())
+			ply:SetRunSpeed(hg_movement_runspeed:GetInt()) -- 230
 
 			ply:SetJumpPower(DEFAULT_JUMP_POWER)
 
@@ -433,9 +439,9 @@ hg.ConVars = hg.ConVars or {}
 			ply:SetViewOffset(ViewOffset)
 			ply:SetViewOffsetDucked(ViewOffsetDucked)
 
-			ply:SetSlowWalkSpeed(60)
-			ply:SetLadderClimbSpeed(150)
-			ply:SetCrouchedWalkSpeed(60)
+			ply:SetSlowWalkSpeed(hg_movement_slowwalkspeed:GetInt())
+			ply:SetLadderClimbSpeed(hg_movement_ladderclimbspeed:GetInt())
+			ply:SetCrouchedWalkSpeed(hg_movement_crouchwalkspeed:GetInt())
 			ply:SetDuckSpeed(0.4)
 			ply:SetUnDuckSpeed(0.4)
 			ply:AddEFlags(EFL_NO_DAMAGE_FORCES)
@@ -1328,7 +1334,7 @@ local IsValid = IsValid
 			(ply:GetNWBool("TauntLeftHand", false) and ply:GetNWFloat("StartTaunt", 0) + 0.1 < CurTime()) or
 			IsValid(ply.flashlight)) and !ply:GetNetVar("handcuffed") and (wep and not wep.reload)) or
 			(deploying) or
-			(ent != ply and math.abs(ent:GetManipulateBoneAngles(ent:LookupBone("ValveBiped.Bip01_L_Finger11"))[2]) > 5 and !ply:InVehicle()) or
+			(ent != ply and ent:LookupBone("ValveBiped.Bip01_L_Finger11") and math.abs(ent:GetManipulateBoneAngles(ent:LookupBone("ValveBiped.Bip01_L_Finger11"))[2]) > 5 and !ply:InVehicle()) or
 			( ply:InVehicle() and (wep and not IsValid(wep)) and not wep.reload) and hg.isdriveablevehicle(ply:GetVehicle()) )) or ply.zmanipstart
 	end
 

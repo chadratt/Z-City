@@ -347,7 +347,7 @@ CalcView = function(ply, origin, angles, fov, znear, zfar)
 	--angles.roll = (turned and 180 or 0) + lean_lerp * 10
 
 	local vpang = GetViewPunchAngles2() + GetViewPunchAngles3()
-	vpang[3] = 0
+	--vpang[3] = 0
 
 
 
@@ -468,7 +468,7 @@ CalcView = function(ply, origin, angles, fov, znear, zfar)
 		end
 	end
 
-	--ply:ManipulateBoneScale(ply:LookupBone("ValveBiped.Bip01_Head1"), firstPerson and (not hg_thirdperson:GetBool() or hg_legacycam:GetBool() or lerpaim < 0.3) and vecZero or vecFull)
+	ply:ManipulateBoneScale(ply:LookupBone("ValveBiped.Bip01_Head1"), firstPerson and (not hg_thirdperson:GetBool() or hg_legacycam:GetBool() or lerpaim < 0.3) and vecZero or vecFull)
 
 	--local angle = tr.Normal:Angle()
 	--angle[3] = angles[3]

@@ -53,20 +53,37 @@ MODE.LootTable = {
 		{12,"weapon_hammer"},
 		{6,"weapon_brick"},
 		{10,"weapon_pocketknife"},
+		{6,"weapon_kitchenknife"},
 
 		{4,"weapon_bat"},
+		{2.5,"weapon_batmetal"},
 		{4,"weapon_leadpipe"},
 		{3,"weapon_hg_extinguisher"},
+		{2,"weapon_hg_wrench"},
 
 		{2,"weapon_hg_crowbar"},
+		{1.5,"weapon_hg_skateboard"},
+		{1.2,"weapon_hg_cinderblock"},
 		{1,"weapon_hatchet"},
 		{0.9,"weapon_hg_axe"},
+		{0.8,"weapon_hg_pitchfork"},
+		{0.6,"weapon_eft_melee_taiga"},
+		{0.6,"weapon_eft_melee_sp8"},
+		{0.5,"weapon_eft_melee_a2607d"},
+		{0.5,"weapon_eft_melee_a2607"},
+		{0.5,"weapon_eft_melee_wycc"},
+		{0.5,"weapon_eft_melee_6x5"},
 		{0.5,"weapon_hg_machete"},
+		{0.45,"weapon_eft_melee_taran"},
 		{0.4,"weapon_hg_sledgehammer"},
+		{0.35,"weapon_drill"},
 
 		{0.2,"hg_brassknuckles"},
+		{0.18,"weapon_hg_fubar"},
 		{0.13,"weapon_hg_spear"},
 		{0.13, "weapon_hg_spear_pro"},
+		{0.12,"weapon_hg_chainsaw"},
+		{0.03,"weapon_hg_fiberwire"},
 	}},
 	{11,{
 		{10,"*sight*"},
@@ -143,22 +160,40 @@ MODE.LootTableStandard = {
 		{6,"weapon_painkillers"},
 		{5,"weapon_bloodbag"},
 		{4,"hg_flashlight"},
-		{1,"weapon_matches"},--for dumbasses
+		{1,"weapon_matches"},
 	}},
 	{35, {
 		{1,"weapon_hammer"},
 		{1,"weapon_brick"},
 		{1,"weapon_pocketknife"},
+		{0.5,"weapon_kitchenknife"},
 		{0.32,"weapon_bat"},
 		{0.3,"weapon_leadpipe"},
+		{0.25,"weapon_batmetal"},
 
+		{0.2,"weapon_hg_wrench"},
 		{0.15,"weapon_hg_extinguisher"},
+		{0.15,"weapon_hg_skateboard"},
 		{0.14,"weapon_hg_crowbar"},
+		{0.12,"weapon_hg_cinderblock"},
 
 		{0.12,"weapon_hatchet"},
 		{0.10,"weapon_hg_axe"},
 		{0.09,"weapon_hg_sledgehammer"},
+		{0.08,"weapon_hg_pitchfork"},
 		{0.07,"weapon_hg_machete"},
+		{0.06,"weapon_eft_melee_taiga"},
+		{0.06,"weapon_eft_melee_sp8"},
+		{0.05,"weapon_eft_melee_a2607d"},
+		{0.05,"weapon_eft_melee_a2607"},
+		{0.05,"weapon_eft_melee_wycc"},
+		{0.05,"weapon_eft_melee_6x5"},
+		{0.045,"weapon_eft_melee_taran"},
+		{0.04,"weapon_drill"},
+
+		{0.018,"weapon_hg_fubar"},
+		{0.01,"weapon_hg_chainsaw"},
+		{0.005,"weapon_hg_fiberwire"},
 	}},
 }
 
@@ -250,6 +285,99 @@ util.AddNetworkString("HMCD(StartPlayersRoleSelection)")
 util.AddNetworkString("HMCD(EndPlayersRoleSelection)")
 util.AddNetworkString("HMCD(SetSubRole)")
 util.AddNetworkString("hmcd_announce_traitor_lose")
+util.AddNetworkString("HMCD_TraitorVision")
+
+local hmcd_traitorvision = CreateConVar("hmcd_traitorvision", "1", {FCVAR_REPLICATED, FCVAR_ARCHIVE, FCVAR_NOTIFY}, "Toggle whether traitors can see a red outline of other traitors through walls", 0, 1)
+
+local HMCD_TraitorVisionRecipients = {}
+
+local function HMCD_GetLivingTraitors()
+	local traitors = {}
+
+	for _, ply in player.Iterator() do
+		if IsValid(ply) and ply.isTraitor and ply:Alive() and ply:Team() != TEAM_SPECTATOR then
+			traitors[#traitors + 1] = ply
+		end
+	end
+
+	return traitors
+end
+
+function MODE:SyncTraitorVision()
+	if not hmcd_traitorvision:GetBool() then
+		for ply in pairs(HMCD_TraitorVisionRecipients) do
+			if IsValid(ply) then
+				net.Start("HMCD_TraitorVision")
+					net.WriteUInt(0, MODE.TraitorExpectedAmtBits)
+				net.Send(ply)
+			end
+		end
+
+		HMCD_TraitorVisionRecipients = {}
+		return
+	end
+
+	local traitors = HMCD_GetLivingTraitors()
+	local traitorSet = {}
+
+	for _, t in ipairs(traitors) do
+		traitorSet[t] = true
+	end
+
+	for _, ply in ipairs(traitors) do
+		net.Start("HMCD_TraitorVision")
+			net.WriteUInt(#traitors, MODE.TraitorExpectedAmtBits)
+
+			for _, t in ipairs(traitors) do
+				net.WriteEntity(t)
+			end
+		net.Send(ply)
+	end
+
+	for ply in pairs(HMCD_TraitorVisionRecipients) do
+		if IsValid(ply) and not traitorSet[ply] then
+			net.Start("HMCD_TraitorVision")
+				net.WriteUInt(0, MODE.TraitorExpectedAmtBits)
+			net.Send(ply)
+		end
+	end
+
+	HMCD_TraitorVisionRecipients = traitorSet
+end
+
+hook.Add("PlayerSpawn", "HMCD_TraitorVisionSpawn", function(ply)
+	if not ply.isTraitor then return end
+
+	timer.Simple(0.5, function()
+		MODE:SyncTraitorVision()
+	end)
+end)
+
+hook.Add("PlayerDeath", "HMCD_TraitorVisionDeath", function(ply)
+	if not ply.isTraitor then return end
+
+	timer.Simple(0.1, function()
+		MODE:SyncTraitorVision()
+	end)
+end)
+
+hook.Add("PlayerDisconnected", "HMCD_TraitorVisionDisconnect", function(ply)
+	HMCD_TraitorVisionRecipients[ply] = nil
+
+	timer.Simple(0.1, function()
+		MODE:SyncTraitorVision()
+	end)
+end)
+
+concommand.Add("hmcd_traitorvision_resync", function(ply)
+	if not IsValid(ply) or not ply.isTraitor then
+		if IsValid(ply) then ply:ChatPrint("[TraitorVision] You are not currently a traitor.") end
+		return
+	end
+
+	MODE:SyncTraitorVision()
+	ply:ChatPrint("[TraitorVision] Resync sent.")
+end)
 
 MODE.Type = MODE.Type or "standard"
 MODE.Types = MODE.Types or {}
@@ -285,7 +413,22 @@ MODE.Types.standard = {
 		ply:SetNetVar("Inventory",inv)
 	end,
 	GunManLoot = function(ply)
-		ply:Give("weapon_px4beretta")
+		local guns = {
+			"weapon_revolver2",
+			"weapon_mk23",
+			"weapon_swmp9",
+			"weapon_p99",
+			"weapon_ppk",
+			"weapon_cz75",
+			"weapon_tokarev",
+			"weapon_m9beretta",
+			"weapon_rugermk3",
+			"weapon_pl15",
+			"weapon_hkp7"
+		}
+
+		local gun = ply:Give(guns[math.random(#guns)])
+		ply:GiveAmmo(gun:GetMaxClip1() * 1, gun:GetPrimaryAmmoType(), true)
 		ply.organism.recoilmul = 1
 	end,
 	PoliceTime = 220,
@@ -571,7 +714,17 @@ MODE.Types.soe = {
 		ply:SetNetVar("Inventory",inv)
 	end,
 	GunManLoot = function(ply)
-		local gun = ply:Give( ( math.random(1,2) > 1 and "weapon_remington870" ) or "weapon_kar98" )
+		local guns = {
+			"weapon_l42a1",
+			"weapon_kar98",
+			"weapon_kar98kriegsmod",
+			"weapon_m590a1",
+			"weapon_doublebarrel",
+			"weapon_remington870",
+			"weapon_winchestersupa3"
+		}
+
+		local gun = ply:Give(guns[math.random(#guns)])
 		ply.organism.recoilmul = 1.0
 		if gun:GetClass() == "weapon_kar98" then
 			hg.AddAttachmentForce(ply,gun,"optic12")
@@ -680,15 +833,7 @@ function MODE:Intermission()
 	MODE.TraitorWord = MODE.TraitorWords[math.random(1, #MODE.TraitorWords)]
 	MODE.TraitorWordSecond = MODE.TraitorWords[math.random(1, #MODE.TraitorWords)]
 
-	local traitors_needed = math.min(player_count - 1, homicide_traitoramount:GetInt())
-	
-	if(MODE.ShouldStartRoleRound())then
-		traitors_needed = math.ceil(player_count / 9)
-		
-		if(player_count > 8 and math.random(1, 8) == 1)then
-			traitors_needed = traitors_needed + 1
-		end
-	end
+	local traitors_needed = math.min(player_count - 1, 2)
 
 	MODE.TraitorExpectedAmt = traitors_needed
 	local main_traitor = nil
@@ -755,6 +900,10 @@ function MODE:Intermission()
 	self.PoliceSpawned = false
 	self.PoliceAllowed = self.Types[self.Type].PoliceAllowed
 
+	SetGlobalFloat("HG_PoliceSpawnTime", self.saved.PoliceTime)
+	SetGlobalBool("HG_PoliceSpawned", false)
+	SetGlobalBool("HG_PoliceAllowed", self.PoliceAllowed or false)
+
 	for k, ply in player.Iterator() do
 		if(MODE.ShouldStartRoleRound())then
 			net.Start("HMCD_RoundStart")	--; TODO Structure description
@@ -783,6 +932,8 @@ function MODE:Intermission()
 			zb.GiveRole(ply, role.name, role.color)
 		end
 	end
+
+	self:SyncTraitorVision()
 
 	--local pts = zb.GetMapPoints( "RandomSpawns" )
 	
@@ -943,6 +1094,7 @@ function MODE:RoundThink()
 	
 			if spawned > 0 then
 				self.PoliceSpawned = true
+				SetGlobalBool("HG_PoliceSpawned", true)
 				PrintMessage(HUD_PRINTTALK, "Police have arrived.")
 				EmitSound("snd_jack_hmcd_policesiren.wav", vector_origin, 0, CHAN_AUTO, 1, 125, 0, 100)
 			end
@@ -980,6 +1132,7 @@ function MODE:RoundThink()
 			local spawned = self:SpawnForce("nationalguard", count)
 			if spawned > 0 then
 				self.PoliceSpawned = true
+				SetGlobalBool("HG_PoliceSpawned", true)
 				PrintMessage(HUD_PRINTTALK, self.Types[self.Type].PoliceText or "National Guard have arrived.")
 				EmitSound(self.Types[self.Type].PoliceSound or "snd_jack_hmcd_heli2.mp3", vector_origin, 0, CHAN_AUTO, 1, 125, 0, 100)
 			end
@@ -1312,7 +1465,9 @@ function MODE:EndRound()
 		ply.SubRole = nil
 		ply.Profession = nil
 	end
-	
+
+	self:SyncTraitorVision()
+
 	if(not winner)then
 		net.Start("hmcd_roundend")
 			net.WriteUInt(#traitors, MODE.TraitorExpectedAmtBits)
@@ -1596,6 +1751,10 @@ function MODE.SpawnPlayers(spawn_with_subroles)
 
             if(MODE.Type == "supermario")then
                 MODE.Types.supermario.CustomJump(current_ply)
+            end
+
+            if(current_ply.Profession and MODE.Professions[current_ply.Profession] and MODE.Professions[current_ply.Profession].SpawnFunction)then
+                MODE.Professions[current_ply.Profession].SpawnFunction(current_ply)
             end
 
             local sub_role = nil

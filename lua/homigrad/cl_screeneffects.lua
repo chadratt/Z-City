@@ -238,6 +238,8 @@ local O2Lerp = 0
 local assimilatedLerp = 0
 local tempLerp = 36.6
 
+local SuffocationLerp = 0
+
 local show_image_time = 0
 local show_some_images_time = 0
 local lobotomy_mats = {
@@ -274,6 +276,13 @@ local function stopthings()
 	if IsValid(NoiseStation2) then
 		NoiseStation2:Stop()
 		NoiseStation2 = nil
+	end
+
+	SuffocationLerp = 0
+
+	if IsValid(SuffocationStation) then
+		SuffocationStation:Stop()
+		SuffocationStation = nil
 	end
 
 	if IsValid(BrainTraumaStation) then
@@ -394,6 +403,37 @@ hook.Add("Post Post Processing", "ItHurts", function()
 	local brain = org.brain or 0
 	O2Lerp = LerpFT(0.01, O2Lerp, (30 - o2) * (org.otrub and 2 or 10) + (brain * 100) * (org.otrub and 1 or 5))
 
+	local suffocationO2 = org.o2[1] or 0
+
+	local suffocationImminent = not org.otrub and suffocationO2 <= 9
+
+	SuffocationLerp = LerpFT(0.05, SuffocationLerp, suffocationImminent and 1 or 0)
+
+	if SuffocationLerp > 0.01 then
+		if !IsValid(SuffocationStation) or SuffocationStation:GetState() != GMOD_CHANNEL_PLAYING then
+			sound.PlayFile("sound/anarchy_core/suffocating.wav", "noblock noplay", function(station)
+				if IsValid(station) then
+					station:SetVolume(0)
+					station:Play()
+					SuffocationStation = station
+					station:EnableLooping(true)
+				end
+			end)
+		end
+
+		if IsValid(SuffocationStation) then
+			SuffocationStation:SetVolume(SuffocationLerp)
+		end
+	else
+		if IsValid(SuffocationStation) then
+			SuffocationStation:SetVolume(0)
+			if SuffocationLerp <= 0.001 then
+				SuffocationStation:Stop()
+				SuffocationStation = nil
+			end
+		end
+	end
+
 	tempLerp = LerpFT(0.01, tempLerp, org.temperature)
 
 	if tempLerp > 38 then
@@ -491,8 +531,8 @@ hook.Add("Post Post Processing", "ItHurts", function()
 		render.UpdateScreenEffectTexture()
 
 		vignetteMat:SetFloat("$c2_x", CurTime() + 10000) //Time
-		vignetteMat:SetFloat("$c0_z", org.otrub and 5 or (pain / 40 + math.max(shock - 5, 0) / 3)) //ColorIntensity
-		vignetteMat:SetFloat("$c1_y", org.otrub and 10 or (pain / 40 + math.max(shock - 5, 0) / 3)) //Vignette
+		vignetteMat:SetFloat("$c0_z", org.otrub and 1 or (pain / 40 + math.max(shock - 5, 0) / 6)) //ColorIntensity
+		vignetteMat:SetFloat("$c1_y", org.otrub and 5 or (pain / 40 + math.max(shock - 5, 0) / 6)) //Vignette
 
 		render.SetMaterial(vignetteMat)
 		render.DrawScreenQuad()
@@ -500,7 +540,7 @@ hook.Add("Post Post Processing", "ItHurts", function()
 		render.UpdateScreenEffectTexture()
 
 		painMat:SetFloat("$c2_x", CurTime() + 10000) //Time
-		painMat:SetFloat("$c0_y", 0.8) //Gate
+		painMat:SetFloat("$c0_y", 0.3) //Gate
 		painMat:SetFloat("$c0_z", 1) //ColorIntensity
 		painMat:SetFloat("$c1_x", math.Clamp(pain / 90, 0, 0.75)) //Lerp
 		painMat:SetFloat("$c1_y", math.Clamp(pain / 90, 0, 0.75)) //Vignette
@@ -509,7 +549,7 @@ hook.Add("Post Post Processing", "ItHurts", function()
 		render.DrawScreenQuad()
 
 		if org.otrub then
-			DrawMotionBlur(0.1, 1., 0.01)
+			--DrawMotionBlur(0.1, 1., 0.01)
 			lply:ScreenFade( SCREENFADE.IN, Color(0,0,0), 2, 0.5 )
 		end
 		

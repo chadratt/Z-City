@@ -18,6 +18,17 @@ function PANEL:Paint( w, h )
 	surface.SetTextPos( w / 2 - lengthX/2,20 )
 	surface.DrawText( text )
 
+	if self.EndTime then
+		local remaining = math.max(0, math.ceil(self.EndTime - CurTime()))
+		local timeText = remaining .. "s"
+
+		surface.SetFont( "ZB_InterfaceMediumLarge" )
+		local tw, th = surface.GetTextSize( timeText )
+		surface.SetTextColor( remaining <= 5 and Color(255, 60, 60, 255) or color_white )
+		surface.SetTextPos( w / 2 - tw / 2, 20 + lengthY + 4 )
+		surface.DrawText( timeText )
+	end
+
 	surface.SetDrawColor( 255, 0, 0, 128)
     surface.DrawOutlinedRect( 0, 0, w, h, 2.5 )
 

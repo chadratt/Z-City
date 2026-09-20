@@ -16,7 +16,7 @@ local gradient_u = Material("vgui/gradient-u")
 gradient_r = Material("vgui/gradient-r")
 
 local function PaintButton(self,w,h)
-    surface.SetDrawColor(155, 0, 0, 108)
+    surface.SetDrawColor(20, 35, 90, 130)
     surface.SetMaterial(gradient_l)
     surface.DrawTexturedRect( 0, 0, w, h )
 end
@@ -117,11 +117,11 @@ end
 local gradient_d = Material("vgui/gradient-d")
 local function PaintFrame(self,w,h)
 	BlurBackground(self)
-    surface.SetDrawColor(50, 0, 0, 155)
+    surface.SetDrawColor(5, 12, 40, 155)
     surface.SetMaterial(gradient_d)
     surface.DrawTexturedRect( 0, 0, w, h )
 
-	surface.SetDrawColor( 150, 0, 0, 128)
+	surface.SetDrawColor( 20, 45, 110, 128)
     surface.DrawOutlinedRect( 0, 0, w, h, 2.5 )
 end
 
@@ -181,7 +181,7 @@ function hg.DrawAchievmentsMenu(ParentPanel)
     end
     function sbar.btnGrip:Paint(w, h)
         self.lerpcolor = Lerp(FrameTime() * 10, self.lerpcolor or 0.2,(self:IsHovered() and 0.8 or 0.6))
-        draw.RoundedBox(0, 0, 0, w, h, Color(100 * self.lerpcolor, 10, 10))
+        draw.RoundedBox(0, 0, 0, w, h, Color(10, 20, 100 * self.lerpcolor))
     end
 
     function frame:UpdateValues()
@@ -209,7 +209,7 @@ function hg.DrawAchievmentsMenu(ParentPanel)
     frame2:Center()
     frame2:SetPos(frame:GetX()+frame:GetWide(),frame:GetY())
     frame2.Paint = function(self,w,h)
-        surface.SetDrawColor(92,0,0,108)
+        surface.SetDrawColor(12, 25, 70, 130)
         surface.SetMaterial(gradient_d)
         surface.DrawTexturedRect(0,0,w,h)
         surface.SetDrawColor(40,36,36,255)

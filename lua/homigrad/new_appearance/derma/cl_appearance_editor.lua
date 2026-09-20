@@ -3,19 +3,19 @@ local APmodule = hg.Appearance
 local PANEL = {}
 
 local colors = {}
-colors.secondary = Color(25,25,35,195)
+colors.secondary = Color(25,25,30,195)
 colors.mainText = Color(255,255,255,255)
 colors.secondaryText = Color(45,45,45,125)
-colors.selectionBG = Color(20,130,25,225)
-colors.highlightText = Color(120,35,35)
-colors.presetBG = Color(35,35,45,220)
-colors.presetBorder = Color(80,80,100,255)
-colors.presetHover = Color(50,50,65,240)
-colors.scrollbarBG = Color(20,20,30,200)
-colors.scrollbarGrip = Color(70,70,90,255)
-colors.scrollbarGripHover = Color(100,100,130,255)
-colors.scrollbarBorder = Color(100,100,120,200)
-colors.previewBorder = Color(255,200,50,255)
+colors.selectionBG = Color(90,90,90,225)
+colors.highlightText = Color(210,210,210)
+colors.presetBG = Color(35,35,38,220)
+colors.presetBorder = Color(90,90,95,255)
+colors.presetHover = Color(55,55,58,240)
+colors.scrollbarBG = Color(20,20,22,200)
+colors.scrollbarGrip = Color(80,80,85,255)
+colors.scrollbarGripHover = Color(110,110,115,255)
+colors.scrollbarBorder = Color(105,105,110,200)
+colors.previewBorder = Color(220,220,220,255)
 
 local presetsDir = "zcity/appearances/presets/"
 
@@ -324,14 +324,14 @@ function PANEL:PostInit()
     viewer:SetFOV( 75 )
     viewer:SetLookAng( Angle( 11, 180, 0 ) )
     viewer:SetCamPos( Vector( 100, 0, 55 ) )
-    viewer:SetDirectionalLight(BOX_RIGHT, Color(255, 0, 0))
-    viewer:SetDirectionalLight(BOX_LEFT, Color(125, 155, 255))
+    viewer:SetDirectionalLight(BOX_RIGHT, Color(150, 150, 150))
+    viewer:SetDirectionalLight(BOX_LEFT, Color(150, 150, 150))
     viewer:SetDirectionalLight(BOX_FRONT, Color(160, 160, 160))
     viewer:SetDirectionalLight(BOX_BACK, Color(0, 0, 0))
     viewer:SetDirectionalLight(BOX_TOP, Color(255, 255, 255))
     viewer:SetDirectionalLight(BOX_BOTTOM, Color(0, 0, 0))
     viewer:Dock(FILL)
-    viewer:SetAmbientLight(Color(255, 0, 0, 255))
+    viewer:SetAmbientLight(Color(90, 90, 90, 255))
 
     function viewer:OnMouseWheeled(delta)
         self.SmoothFOVDelta = self:GetFOV() - delta * 5
@@ -412,7 +412,7 @@ function PANEL:PostInit()
 
     function viewer:PostDrawModel(Entity)
         local tbl = main.AppearanceTable
-
+        Entity.PredictedAccessories = tbl.AAttachments
         for k,attach in ipairs(tbl.AAttachments) do
             DrawAccesories(Entity, Entity, attach, hg.Accessories[attach],false,true)
         end
@@ -452,14 +452,12 @@ function PANEL:PostInit()
         modelSelector:AddChoice(k)
     end
 
-    -- Main bottom container
     local bottomContainer = vgui.Create("DPanel", viewer)
     bottomContainer:Dock(BOTTOM)
     bottomContainer:SetSize(1, ScreenScale(50))
     bottomContainer:DockMargin(ScreenScale(50), 0, ScreenScale(50), ScreenScale(8))
     function bottomContainer:Paint(w, h) end
 
-    -- Down panel (original controls)
     local downPanel = vgui.Create("DPanel", bottomContainer)
     downPanel:Dock(BOTTOM)
     downPanel:SetSize(1, ScreenScale(15))
@@ -498,7 +496,7 @@ function PANEL:PostInit()
 
     function ApplyButton:Paint(w,h)
         draw.RoundedBox(4,0,0,w,h,colors.selectionBG)
-        surface.SetDrawColor(Color(30, 160, 35, 255))
+        surface.SetDrawColor(Color(150, 150, 150, 255))
         surface.DrawOutlinedRect(0,0,w,h,1)
     end
 
@@ -533,9 +531,9 @@ function PANEL:PostInit()
     savePresetBtn:SetTextColor(colors.mainText)
     savePresetBtn:DockMargin(0,0,5,0)
     function savePresetBtn:Paint(w, h)
-        local bgCol = self:IsHovered() and Color(30, 150, 35, 255) or colors.selectionBG
+        local bgCol = self:IsHovered() and Color(90, 90, 90, 255) or colors.selectionBG
         draw.RoundedBox(4, 0, 0, w, h, bgCol)
-        surface.SetDrawColor(Color(40, 180, 45, 255))
+        surface.SetDrawColor(Color(150, 150, 150, 255))
         surface.DrawOutlinedRect(0, 0, w, h, 1)
     end
     local presetNameEntry
@@ -563,9 +561,9 @@ function PANEL:PostInit()
     loadPresetBtn:SetTextColor(colors.mainText)
     loadPresetBtn:DockMargin(0,0,5,0)
     function loadPresetBtn:Paint(w, h)
-        local bgCol = self:IsHovered() and Color(50, 100, 180, 255) or Color(35, 75, 150, 230)
+        local bgCol = self:IsHovered() and Color(75, 75, 75, 255) or Color(55, 55, 55, 230)
         draw.RoundedBox(4, 0, 0, w, h, bgCol)
-        surface.SetDrawColor(Color(60, 120, 200, 255))
+        surface.SetDrawColor(Color(120, 120, 120, 255))
         surface.DrawOutlinedRect(0, 0, w, h, 1)
     end
     function loadPresetBtn:DoClick()
@@ -646,9 +644,9 @@ function PANEL:PostInit()
     deletePresetBtn:SetText("Delete")
     deletePresetBtn:SetTextColor(colors.mainText)
     function deletePresetBtn:Paint(w, h)
-        local bgCol = self:IsHovered() and Color(180, 50, 50, 255) or Color(140, 40, 40, 230)
+        local bgCol = self:IsHovered() and Color(60, 60, 60, 255) or Color(38, 38, 38, 230)
         draw.RoundedBox(4, 0, 0, w, h, bgCol)
-        surface.SetDrawColor(Color(200, 60, 60, 255))
+        surface.SetDrawColor(Color(90, 90, 90, 255))
         surface.DrawOutlinedRect(0, 0, w, h, 1)
     end
     function deletePresetBtn:DoClick()
@@ -1095,6 +1093,13 @@ function hg.CreateApperanceMenu(ParentPanel)
         zpan = vgui.Create("HG_AppearanceMenu",ParentPanel)
         zpan:SetSize(ParentPanel:GetWide(),ParentPanel:GetTall())
         zpan:SetPos(0,0)
+
+        function zpan:Think()
+            local t = CurTime()
+            local floatX = math.sin(t * 0.7) * 1.6 + math.sin(t * 1.9 + 1.3) * 0.5
+            local floatY = math.cos(t * 0.55 + 0.4) * 1.6 + math.sin(t * 2.3 + 2.1) * 0.5
+            self:SetPos(floatX, floatY)
+        end
     end)
     
 end

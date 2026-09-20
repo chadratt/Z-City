@@ -657,4 +657,50 @@ net.Receive("HMCD(SetSubRole)", function(len, ply)
 end)
 --//
 
+local HMCD_TraitorVisionColor = Color(255, 0, 0, 255)
+local HMCD_TraitorVisionList = {}
+
+net.Receive("HMCD_TraitorVision", function()
+	local count = net.ReadUInt(MODE.TraitorExpectedAmtBits)
+	local list = {}
+
+	for i = 1, count do
+		list[#list + 1] = net.ReadEntity()
+	end
+
+	HMCD_TraitorVisionList = list
+
+	if GetConVar("developer"):GetInt() > 0 then
+		print("[TraitorVision] Received " .. count .. " traitor entity(ies) from server")
+		for _, ent in ipairs(list) do
+			print("  -> " .. tostring(ent) .. (IsValid(ent) and (" (" .. ent:Nick() .. ")") or " (invalid)"))
+		end
+	end
+end)
+
+hook.Add("SetupOutlines", "HMCD_TraitorVisionOutline", function(Add)
+	if #HMCD_TraitorVisionList == 0 then return end
+	if not lply.isTraitor then return end
+
+	local targets = {}
+
+	for _, ent in ipairs(HMCD_TraitorVisionList) do
+		if IsValid(ent) and ent:IsPlayer() and ent != lply and ent:Alive() then
+			targets[#targets + 1] = ent
+		end
+	end
+
+	if #targets > 0 then
+		Add(targets, HMCD_TraitorVisionColor, OUTLINE_MODE_BOTH)
+	end
+end)
+
+concommand.Add("hmcd_traitorvision_debug", function()
+	print("[TraitorVision] lply.isTraitor = " .. tostring(lply.isTraitor))
+	print("[TraitorVision] List size = " .. #HMCD_TraitorVisionList)
+	for _, ent in ipairs(HMCD_TraitorVisionList) do
+		print("  -> " .. tostring(ent) .. (IsValid(ent) and (" (" .. ent:Nick() .. ", alive=" .. tostring(ent:Alive()) .. ")") or " (invalid)"))
+	end
+end)
+
 --CreateEndMenu()

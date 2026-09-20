@@ -1,8 +1,8 @@
 local PANEL = {}
 local curent_panel 
-local red_select = Color(192,0,0)
+local red_select = Color(210,210,210)
 
-DISCORD_URL = "https://discord.gg/475EmEdTgH"
+DISCORD_URL = "https://discord.gg/fG2uxaXaBv"
 
 local Selects = {
     {Title = "Disconnect", Func = function(luaMenu) RunConsoleCommand("disconnect") end},
@@ -109,6 +109,9 @@ surface.CreateFont("ZC_MM_Title", {
 
 local Pluv = Material("pluv/pluvkid.jpg")
 
+local ANARCHY_TEXT = "ANARCHY"
+local ANARCHY_COLOR = Color(150, 150, 150, 255)
+
 function PANEL:InitializeMarkup()
 	local mapname = game.GetMap()
 	local prefix = string.find(mapname, "_")
@@ -118,20 +121,16 @@ function PANEL:InitializeMarkup()
 	local gm = splasheh[math.random(#splasheh)] .. " | " .. string.NiceName(mapname) 
 
     if hg.PluvTown.Active then
-        local text = "<font=ZC_MM_Title><colour=199,2,2>    </colour>City</font>\n<font=ZCity_Tiny><colour=105,105,105>" .. gm .. "</colour></font>"
-
         self.SelectedPluv = table.Random(hg.PluvTown.PluvMats)
-
-        return markup.Parse(text)
     end
 
-    local text = "<font=ZC_MM_Title><colour=199,2,2,255>Z</colour>-City</font>\n<font=ZCity_Tiny><colour=105,105,105>" .. gm .. "</colour></font>"
+    local text = "<font=ZCity_Tiny><colour=105,105,105>" .. gm .. "</colour></font>"
     return markup.Parse(text)
 end
 
 local color_red = Color(255,25,25,45)
 local clr_gray = Color(255,255,255,25)
-local clr_verygray = Color(10,10,19,235)
+local clr_verygray = Color(12,12,12,235)
 
 function PANEL:Init()
     self:SetAlpha(0)
@@ -144,7 +143,7 @@ function PANEL:Init()
     self:SetDraggable(false)
     self:ShowCloseButton(false)
     curent_panel = nil
-    self.Title, self.TitleShadow = self:InitializeMarkup()
+    self.Subtitle = self:InitializeMarkup()
 
     timer.Simple(0, function()
         if self.First then
@@ -164,7 +163,30 @@ function PANEL:Init()
             surface.DrawTexturedRect(0, ScreenScale(27), ScreenScale(35), ScreenScale(27))
         end
 
-        self.Title:Draw(ScreenScale(15), ScreenScale(50), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 255, TEXT_ALIGN_LEFT)
+        local old_clip = DisableClipping(true)
+
+        surface.SetFont("ZC_MM_Title")
+        local _, title_h = surface.GetTextSize("A")
+
+        local base_x = ScreenScale(15)
+        local base_y = ScreenScale(50) - title_h / 2
+
+        local char_x = base_x
+        for i = 1, #ANARCHY_TEXT do
+            local ch = string.sub(ANARCHY_TEXT, i, i)
+            local char_w = surface.GetTextSize(ch)
+            local float_offset = math.sin(CurTime() * 2 + i * 0.6) * ScreenScale(3)
+
+            surface.SetTextColor(ANARCHY_COLOR)
+            surface.SetTextPos(char_x, base_y + float_offset)
+            surface.DrawText(ch)
+
+            char_x = char_x + char_w
+        end
+
+        DisableClipping(old_clip)
+
+        self.Subtitle:Draw(ScreenScale(15), ScreenScale(50) + title_h, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 255, TEXT_ALIGN_LEFT)
     end
 
     self.Buttons = {}
@@ -182,6 +204,8 @@ function PANEL:Init()
     self.panelparrent:SetPos(bottomDock:GetWide()+bottomDock:GetX(), 0)
     self.panelparrent:SetSize(ScrW() - bottomDock:GetWide()*1, ScrH())
     self.panelparrent.Paint = function(this, w, h) end
+
+    hg.DrawLeaderboardMenu(self.panelparrent)
     
     local git = vgui.Create("DLabel", bottomDock)
     git:Dock(BOTTOM)
@@ -224,7 +248,7 @@ local gradient_d = surface.GetTextureID("vgui/gradient-d")
 local gradient_r = surface.GetTextureID("vgui/gradient-u")
 local gradient_l = surface.GetTextureID("vgui/gradient-l")
 
-local clr_1 = Color(102,0,0,35)
+local clr_1 = Color(60,60,60,35)
 function PANEL:Paint(w,h)
     draw.RoundedBox( 0, 0, 0, w, h, self.ColorBG )
     hg.DrawBlur(self, 5)

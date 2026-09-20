@@ -391,6 +391,41 @@ end)
 
 util.AddNetworkString("should_open_inv")
 local playerMeta = FindMetaTable("Player")
+
+local SearchSoundRadius = 60
+local SearchSoundPath = "anarchy_core/backpack/searching.wav"
+
+util.PrecacheSound(SearchSoundPath)
+
+local function PlaySearchSound(searcher, ent)
+    local soundEnt = IsValid(ent.FakeRagdoll) and ent.FakeRagdoll or ent
+    if not IsValid(soundEnt) then return end
+
+    local pos = soundEnt:GetPos()
+    local notified = {}
+
+    if IsValid(searcher) and searcher:IsPlayer() then
+        local filter = RecipientFilter()
+        filter:AddPlayer(searcher)
+        soundEnt:EmitSound(SearchSoundPath, 75, 100, 1, CHAN_ITEM, 0, 0, filter)
+        notified[searcher] = true
+    end
+
+    for _, nearbyPly in ipairs(player.GetAll()) do
+        if not IsValid(nearbyPly) or notified[nearbyPly] then continue end
+
+        local dist = nearbyPly:GetPos():Distance(pos)
+        if dist > SearchSoundRadius then continue end
+
+        local volume = math.Clamp(1 - (dist / SearchSoundRadius), 0.15, 1)
+
+        local filter = RecipientFilter()
+        filter:AddPlayer(nearbyPly)
+
+        soundEnt:EmitSound(SearchSoundPath, 75, 100, volume, CHAN_ITEM, 0, 0, filter)
+    end
+end
+
 function playerMeta:OpenInventory(ent)
     hook.Run("ZB_InventoryOpened",self,ent)
     if not IsValid(ent) then return end
@@ -401,6 +436,8 @@ function playerMeta:OpenInventory(ent)
     net.Start("should_open_inv")
     net.WriteEntity(ent)
     net.Send(self)
+
+    PlaySearchSound(self, ent)
 end
 
 function playerMeta:GetLookTrace()

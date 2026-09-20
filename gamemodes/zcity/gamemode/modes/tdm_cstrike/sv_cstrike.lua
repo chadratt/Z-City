@@ -4,7 +4,7 @@ MODE.KillMoney = 1000
 MODE.StartMoney = 1000
 MODE.start_time = 20
 
-MODE.Rounds = 5
+MODE.Rounds = 3
 
 MODE.ROUND_TIME = 240
 

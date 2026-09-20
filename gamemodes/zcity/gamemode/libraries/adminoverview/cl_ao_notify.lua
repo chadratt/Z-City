@@ -1,0 +1,76 @@
+if not CLIENT then return end
+zb = zb or {}
+zb.AO = zb.AO or {}
+function zb.AO.OpenNotifyWindow(targets)
+    if not targets or #targets == 0 then return end
+    local frame = vgui.Create("ZFrame")
+    frame:SetSize(420, 440)
+    frame:Center()
+    frame:SetTitle("")
+    frame:MakePopup()
+    frame:ShowCloseButton(false)
+    frame:SetDraggable(true)
+    local header = vgui.Create("DLabel", frame)
+    header:SetText("NOTIFY - " .. #targets .. " player(s)")
+    header:SetFont("ZB_QM_Category")
+    header:SetTextColor(color_white)
+    header:Dock(TOP)
+    header:DockMargin(12, 12, 12, 8)
+    header:SetContentAlignment(5)
+    local msgEntry = vgui.Create("DTextEntry", frame)
+    msgEntry:Dock(TOP)
+    msgEntry:DockMargin(14, 4, 14, 10)
+    msgEntry:SetTall(30)
+    msgEntry:SetPlaceholderText("Message text...")
+    local mixerLbl = vgui.Create("DLabel", frame)
+    mixerLbl:SetText("Text color")
+    mixerLbl:SetTextColor(Color(200, 200, 200))
+    mixerLbl:Dock(TOP)
+    mixerLbl:DockMargin(14, 0, 14, 2)
+    local mixer = vgui.Create("DColorMixer", frame)
+    mixer:Dock(TOP)
+    mixer:DockMargin(14, 0, 14, 8)
+    mixer:SetTall(180)
+    mixer:SetPalette(true)
+    mixer:SetAlphaBar(false)
+    mixer:SetWangs(true)
+    mixer:SetColor(Color(255, 255, 255))
+    local shakyCheck = vgui.Create("DCheckBoxLabel", frame)
+    shakyCheck:SetText("Shaky text (pain-style wobble)")
+    shakyCheck:SetTextColor(color_white)
+    shakyCheck:Dock(TOP)
+    shakyCheck:DockMargin(16, 2, 12, 10)
+    shakyCheck:SizeToContents()
+    local btnRow = vgui.Create("DPanel", frame)
+    btnRow:Dock(BOTTOM)
+    btnRow:SetTall(40)
+    btnRow:DockMargin(14, 4, 14, 12)
+    btnRow.Paint = nil
+    local cancelBtn = vgui.Create("DButton", btnRow)
+    cancelBtn:SetText("Cancel")
+    cancelBtn:Dock(LEFT)
+    cancelBtn:SetWide(100)
+    cancelBtn.DoClick = function() frame:Close() end
+    local sendBtn = vgui.Create("DButton", btnRow)
+    sendBtn:SetText("Send")
+    sendBtn:Dock(FILL)
+    sendBtn:DockMargin(6, 0, 0, 0)
+    sendBtn.DoClick = function()
+        local msg = msgEntry:GetValue()
+        if msg == "" then
+            msgEntry:SetPlaceholderText("Type a message first!")
+            return
+        end
+        net.Start("ZB_AO_Notify")
+            net.WriteString(msg)
+            net.WriteColor(mixer:GetColor())
+            net.WriteBool(shakyCheck:GetChecked())
+            net.WriteUInt(#targets, 8)
+            for _, ent in ipairs(targets) do
+                net.WriteEntity(ent)
+            end
+        net.SendToServer()
+        frame:Close()
+    end
+    return frame
+end

@@ -256,7 +256,6 @@ if SERVER then
                 -- the body by head
 
                 if not_visible then
-                    ent:Remove()
                     self:Remove()
                 end
             end

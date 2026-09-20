@@ -31,7 +31,7 @@ local tab2 = {
 local cc = Material( "effects/shaders/merc_chromaticaberration" )
 
 local offset = CreateClientConVar("berserk_offset", "0.85", true, false, "Set berserk music offset from start", 0, 5)
-local bpm = CreateClientConVar("berserk_bpm", "70", true, false, "Set berserk effect bpm", 1, 280)
+local bpm = CreateClientConVar("berserk_bpm", "110", true, false, "Set berserk effect bpm", 1, 280)
 local path = CreateClientConVar("berserk_path", "sound/zbattle/pharmacia.mp3", true, false, "Set berserk effect music path")
 
 hook.Add("RenderScreenspaceEffects", "berserkEffect", function()
@@ -72,13 +72,6 @@ hook.Add("RenderScreenspaceEffects", "berserkEffect", function()
 			if IsValid(part) then
 				part:StopEmission( false, true, false )
 			end
-
-			for i = 1, 120 do
-				timer.Simple(i/90,function()
-					ViewPunch(AngleRand(-1.5,1.5))
-				end)
-			end
-
 			hg.underberserk = false
 			hg.underberserk2 = true
 			sound.PlayFile(path:GetString(), "noblock", function(channel)
@@ -89,7 +82,7 @@ hook.Add("RenderScreenspaceEffects", "berserkEffect", function()
 
 			hg.currentNotification = nil
 			hg.notifications = {}
-			hg.CreateNotificationBerserk("GREAT.")
+			hg.CreateNotificationBerserk("UNSTOPPABLE.")
 
 			hg.berserkStartTime2 = SysTime()
 		end)
@@ -130,16 +123,15 @@ hook.Add("RenderScreenspaceEffects", "berserkEffect", function()
 		intensity = math.Clamp((intensity * 0.25 + 0.75), 0, 1)
 		intensity = math.ease.InExpo(intensity) * berserkClamped * 2--math.abs(math.cos(1 - (intensity * 2))) * berserkClamped
 
-		tab2[ "$pp_colour_mulr" ] = (1.5 * math.min(1, berserk * 4)) + (intensity / 5)
+
 		tab2[ "$pp_colour_addr" ] = (0.1 * math.min(1, berserk * 4)) + intensity / 64
 		-- tab[ "$pp_colour_contrast" ] = 1 + intensity / 8
 
-		tab2[ "$pp_colour_colour" ] = 1 - math.Clamp(intensity, 0, 0.9)
 		tab2[ "$pp_colour_mulg" ] = 0
 		tab2[ "$pp_colour_mulb" ] = 0
 
 		DrawColorModify(tab2)
-		DrawBloom( 0.65, intensity, 9, 9, 1, 1, intensity / 16, 0.2, 0.2 )
+
 
 		hg.notificationFont = "BerserkFont"
 
@@ -192,15 +184,6 @@ hook.Add("Post Post Processing", "berserkEffect", function()
 	end
 end)
 
-hook.Add("HG_CalcView","InsaneRollCam",function(ply, origin, angles, fova)
-	if ply:Alive() and hg.underberserk2 and IsValid(hg.berserkStation) and hg.berserkClamped then
-		local intensity = 1 - ((hg.berserkStation:GetTime() - offset:GetFloat()) / 60 * bpm:GetInt())
-		angles[1] = angles[1] - hg.berserkIntensity * 0.2
-		angles[3] = math.cos(CurTime() * 0.3) * hg.berserkClamped + hg.berserkIntensity * 2 * (intensity % 2 > 1 and 1 or -1)
-		--print(fova)
-		fova[1] = fova[1] + hg.berserkIntensity * -2
-	end
-end)
 
 local META = FindMetaTable("Player")
 function META:IsBerserk()

@@ -23,48 +23,13 @@ hook.Add("OnEntityCreated", "bull_add", function(npc)
 end)
 local vecZero = Vector(0,0,0)
 
---[[
-
-ValveBiped.Bip01_Pelvis 12.775918006897
-ValveBiped.Bip01_Spine2 24.36336517334
-ValveBiped.Bip01_R_UpperArm     3.4941370487213
-ValveBiped.Bip01_L_UpperArm     3.441034078598
-ValveBiped.Bip01_L_Forearm      1.7655730247498
-ValveBiped.Bip01_L_Hand 1.0779889822006
-ValveBiped.Bip01_R_Forearm      1.7567429542542
-ValveBiped.Bip01_R_Hand 1.0214320421219
-ValveBiped.Bip01_R_Thigh        10.212161064148
-ValveBiped.Bip01_R_Calf 4.9580898284912
-ValveBiped.Bip01_Head1  5.169750213623
-ValveBiped.Bip01_L_Thigh        10.213202476501
-ValveBiped.Bip01_L_Calf 4.9809679985046
-ValveBiped.Bip01_L_Foot 2.3848159313202
-ValveBiped.Bip01_R_Foot 2.3848159313202
-
-12.775918006897 0
-24.36336517334  3
-3.4941370487213 9
-3.441034078598  14
-1.7655730247498 15
-1.0779889822006 16
-1.7567429542542 10
-1.0214320421219 11
-10.212161064148 18
-4.9580898284912 19
-5.169750213623  6
-10.213202476501 22
-4.9809679985046 23
-2.3848159313202 24
-2.3848159313202 20
-]]--
-
 hg = hg or {}
 
 hg.cachedmodels = {}
 
 local function cacheModel(ragdoll)
 	local model = ragdoll:GetModel()
-		
+
 	if not hg.cachedmodels[model] then
 		local tbl = {}
 		hg.cachedmodels[model] = {}
@@ -88,7 +53,7 @@ local fixbones = {
 	["ValveBiped.Bip01_R_Thigh"] = true,
 	["ValveBiped.Bip01_R_Calf"] = true,
 	["ValveBiped.Bip01_L_Calf"] = true,
-	//["ValveBiped.Bip01_L_Hand"] = true,
+
 }
 
 function hg.Ragdoll_Create(ply)
@@ -98,7 +63,7 @@ function hg.Ragdoll_Create(ply)
 
 	ragdoll:SetPos(ply:GetPos())
 	ragdoll:SetAngles(ply:GetAngles())
-	--ragdoll:SetVelocity(ply:GetVelocity())
+
 	ragdoll:SetModel(ply:GetModel())
 	ragdoll.CurAppearance = table.Copy(ply.CurAppearance)
 
@@ -107,8 +72,6 @@ function hg.Ragdoll_Create(ply)
 	ragdoll:Spawn()
 	ragdoll:Activate()
 	ragdoll:AddEFlags(EFL_NO_DAMAGE_FORCES + EFL_DONTBLOCKLOS)
-	--ragdoll:AddFlags(FL_NOTARGET)
-	--ply:AddFlags(FL_NOTARGET)
 
 	hg.queue_ragdolls[ragdoll] = {}
 
@@ -121,34 +84,22 @@ function hg.Ragdoll_Create(ply)
 	local bodyphy = ragdoll:GetPhysicsObjectNum(10)
 	if !bodyphy then return end
 	bull:SetPos(bodyphy:GetPos()+bodyphy:GetAngles():Right()*7)
-	--bull:SetPos( eyeatt.Pos + eyeatt.Ang:Up() * 3.5 )
+
 	bull:SetAngles( ragdoll:GetAngles() )
 	bull:SetMoveType(MOVETYPE_OBSERVER)
-	--bull:SetCollisionGroup(COLLISION_GROUP_BREAKABLE_GLASS)
+
 	bull:SetKeyValue( "targetname", "Bullseye" )
-	--bull:SetParent(ragdoll, ragdoll:LookupAttachment("eyes"))
+
 	bull:SetKeyValue( "health","9999" )
 	bull:SetKeyValue( "spawnflags","256" )
 	bull:Spawn()
 	bull:Activate()
 	bull:SetNotSolid(true)
-	
-	--bull:SetCollisionBoundsWS(-Vector(5,5,5),Vector(5,5,5))
-	--bull:SetSurroundingBounds(-Vector(50,50,50),Vector(50,50,50))
-	--[[local enta = ents.Create("prop_dynamic")
-	enta:SetPos(bull:GetPos())
-	enta:SetAngles(bull:GetAngles())
-	enta:SetModel("models/props_junk/metal_paintcan001a.mdl")
-	enta:SetParent(bull)
-	enta:Spawn()
-	enta:SetNotSolid(true)
-	bull:CallOnRemove("asdsad",function() enta:Remove() end)--]]
-	
+
 	for i, ent in ipairs(ents.FindByClass("npc_*")) do
 		if not IsValid(ent) or not ent.AddEntityRelationship then continue end
 		ent:AddEntityRelationship(bull, ent:Disposition(ply))
 	end
-
 
 	for i, ent in ipairs(ents.FindByClass("terminator_*")) do
 		if not IsValid(ent) or not ent.AddEntityRelationship then continue end
@@ -164,21 +115,13 @@ function hg.Ragdoll_Create(ply)
 	end)
 	ragdoll:AddCallback("PhysicsCollide", function(outEnt, data) hook_Run("Ragdoll Collide", ragdoll, data) end)
 	local velocity = ply:GetVelocity()
-	--local phys = ragdoll:GetPhysicsObject()
-	--if IsValid(phys) then --phys:SetMass(20)
-	--end
-	
-	--[[local phys = ragdoll:GetPhysicsObject()
-	if IsValid(phys) then
-		phys:SetMass(20)
-	end]]--
 
 	local model = ragdoll:GetModel()
-	
+
 	cacheModel(ragdoll)
 
 	local offset = ply:GetPos() - ply:GetBoneMatrix(0):GetTranslation() + vector_up * 36
-	
+
 	if ply:InVehicle() then
 		local veh = ply:GetVehicle()
 		veh.rags = veh.rags or {}
@@ -193,42 +136,27 @@ function hg.Ragdoll_Create(ply)
 		ply.AddForceRag = ply.AddForceRag or {}
 		ply.AddForceRag[physNum] = ply.AddForceRag[physNum] or {}
 		local vel = (ply.AddForceRag[physNum][2] or vecZero) * math.max(0, (ply.AddForceRag[physNum][1] or CurTime()) - CurTime()) / 0.25
-		
-		--print(ragdoll:GetBoneName(ragdoll:TranslatePhysBoneToBone(hg.cachedmodels[model][ragdoll:GetBoneName(bone)])),ragdoll:GetBoneName(bone),IdealMassPlayer[ragdoll:GetBoneName(bone)])
-		
+
 		phys:SetMass(IdealMassPlayer[ragdoll:GetBoneName(bone)] or 4)
 		phys:SetVelocity(velocity)
 		phys:ApplyForceCenter(vel)
 
-		--phys:SetContents(bit.band(phys:GetContents(), bit.bnot(MASK_SHOT)))
-		
 		ply.AddForceRag[physNum][2] = vecZero
-		
-		/*local ent = Entity(1)
-		for i=0, ent:GetNumPoseParameters() - 1 do
-			local min, max = ent:GetPoseParameterRange( i )
-			print( ent:GetPoseParameterName( i ) .. ' ' .. min .. " / " .. max )
-		end*/
 
 		local bonename = ragdoll:GetBoneName(bone)
-		local hitgroup = hg.bonetohitgroup[bonename]--( ent:IsPlayer() and tr.HitGroup or hg.bonetohitgroup[bonename])
-		
+		local hitgroup = hg.bonetohitgroup[bonename]
+
 		if hg.amputeetable[bonename] and ply.organism[hg.amputeetable[bonename].."amputated"] then
-			--phys:SetContents(CONTENTS_EMPTY)
+
 			Gib_RemoveBone(ragdoll, bone, physNum, true)
-			--phys:SetCollisionGroup(COLLISION_GROUP_WORLD)
+
 		end
 
 		if ply:InVehicle() then
 			local veh = ply:GetVehicle()
 			local veh2 = ply.GetSimfphys and IsValid(ply:GetSimfphys()) and ply:GetSimfphys() or ply:GetVehicle()
 
-			//ply.nocollide1 = constraint.NoCollide(ragdoll, veh, physNum, 0)
-			//ply.nocollide2 = constraint.NoCollide(ragdoll, IsValid(veh:GetParent()) and veh:GetParent() or veh, physNum, 0)
-
 			ragdoll:SetParent(IsValid(veh:GetParent()) and veh:GetParent() or veh)
-
-			//ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
 
 			ply:SetEyeAngles(angle_zero)
 
@@ -242,20 +170,16 @@ function hg.Ragdoll_Create(ply)
 
 			local matrix = ply:GetBoneMatrix(bone)
 
-			local pos = matrix:GetTranslation() + veh:GetAngles():Up() * 5// + (OwOcar and veh:GetAngles():Right() * 3 + veh:GetAngles():Forward() * 2 or vector_origin)
+			local pos = matrix:GetTranslation() + veh:GetAngles():Up() * 5
 			if veh:GetClass() == "prop_vehicle_airboat" and veh:GetInternalVariable("EnableGun") then
-				--pos:Add(veh:GetAngles():Right() * 10 + veh:GetAngles():Forward() * -10 + veh:GetAngles():Up() * -15)
+
 				pos:Add(veh:GetAngles():Right() * 10)
 			end
-			
-			local ang = matrix:GetAngles()// + (OwOcar and Angle(0, -90, 0) or Angle(0, 0, 0))
 
-			//ply:GetBoneMatrix(0):GetTranslation()
-			//local pos, ang = hg.RotateAroundPoint2(pos, ang, vector_origin, vector_origin, Angle(-90,0,0))
+			local ang = matrix:GetAngles()
+
 			phys:SetPos(pos)
 			phys:SetAngles(ang)
-
-			//ragdoll:SetCollisionGroup(COLLISION_GROUP_WORLD)
 
 			if fixbones[ragdoll:GetBoneName(bone)] then
 				local weld = constraint.Weld(ragdoll, IsValid(veh:GetParent()) and veh:GetParent() or veh, physNum, 0, 10000, false, false)
@@ -265,7 +189,7 @@ function hg.Ragdoll_Create(ply)
 				if IsValid(weld) then
 					weld:CallOnRemove("removeOwO", function()
 						if ragdoll.removingwelds then return end
-						//hook.Run("CanExitVehicle", ply, veh)
+
 						if !hg.leaveveh then hg.fallfromveh = true end
 						hg.leaveveh = true
 						if IsValid(ply) then ply:ExitVehicle() end
@@ -286,7 +210,7 @@ function hg.Ragdoll_Create(ply)
 							for i, weld in pairs(ragdoll.welds) do
 								if IsValid(weld) then weld:Remove() end
 							end
-							
+
 							ragdoll.welds = nil
 						end
 
@@ -310,51 +234,22 @@ function hg.Ragdoll_Create(ply)
 			local _,ang = LocalToWorld(vecZero,Angle(-80,0,90),vecZero,ply:EyeAngles())
 			phys:SetAngles(ang)
 		end
-		--phys:EnableDrag(true)
-		--phys:SetDragCoefficient( 1500 )
-		--phys:SetDamping(0,2)
-		--print(bone)
-		--[[if !string.find(ragdoll:GetBoneName(bone),"L") then
-			phys:EnableMotion(false)
-		end--]]
+
 		phys:Wake()
 	end
 
+	if ply.organism.lleg == 1 and !ply.organism.llegamputated then hg.FreeBrokenLegBones(ragdoll, "lleg") end
+	if ply.organism.rleg == 1 and !ply.organism.rlegamputated then hg.FreeBrokenLegBones(ragdoll, "rleg") end
+
 	ragdoll:SetNWString("PlayerName", ply:GetNWString("PlayerName") or ply:Name())
 	ragdoll:SetNWVector("PlayerColor", ply:GetPlayerColor())
-	--print(ply:GetNetVar("Accessories","none"))
-	--timer.Simple(1,function()
-	--print(ragdoll:GetNetVar("Accessories","none"))
-	--end)
 
 	ply:SetNWEntity("FakeRagdoll",ragdoll)
 
 	ragdoll:SetNWEntity("ply", ply)
-	--ply:SetPos(ragdoll:GetPos())
-
-	--[[if ply.organism.LodgedEntities then
-		timer.Simple(0, function()
-			for lodged, settings in pairs(ragdoll.organism.LodgedEntities) do
-				constraint.RemoveConstraints(lodged, "Weld")
-
-				timer.Simple(0, function()
-					local phys_obj = ragdoll:GetPhysicsObjectNum(settings.PhysBoneID)
-					local pos, ang = LocalToWorld(settings.OffsetPos, settings.OffsetAng, phys_obj:GetPos(), phys_obj:GetAngles())
-
-					lodged:SetPos(pos)
-					lodged:SetAngles(ang)
-					
-					constraint.Weld(lodged, ragdoll, 0, settings.PhysBoneID, 0, true, false)			
-					
-					lodged:SetPos(pos)
-					lodged:SetAngles(ang)
-				end)
-			end
-		end)
-	end]]
 
 	hook_Run("Ragdoll_Create", ply, ragdoll)
-	
+
 	ragdoll.ply = ply
 	ApplyAppearanceRagdoll(ragdoll, ply)
 	return ragdoll
@@ -367,7 +262,7 @@ local function NET_Fake(self, ply, send)
 	net.Start("Player Ragdoll")
 	net.WriteEntity(ply)
 	net.WriteEntity(self)
-	--net.WriteInt(self:EntIndex(),32)
+
 	if IsValid(send) and send:IsPlayer() then
 		net.Send(send)
 	else
@@ -380,7 +275,7 @@ local function NET_Fake2(num, ply, send)
 	net.Start("Player Ragdoll")
 	net.WriteEntity(ply)
 	net.WriteEntity(Entity(num) or NULL)
-	--net.WriteInt(num,32)
+
 	if IsValid(send) and send:IsPlayer() then
 		net.Send(send)
 	else
@@ -392,7 +287,7 @@ local function NET_Up(ply, send)
 	net.Start("Player Ragdoll")
 	net.WriteEntity(ply)
 	net.WriteEntity(NULL)
-	--net.WriteInt(0,32)
+
 	if IsValid(send) and send:IsPlayer() then
 		net.Send(send)
 	else
@@ -408,7 +303,7 @@ hook.Add("PlayerSpawn", "Fake", function(ply)
 		ply:SetNWEntity("RagdollDeath", NULL)
 		ply.gottarespawn = nil
 	end
-	--NET_Fake2(0, ply)
+
 	timer.Simple(.1, function()
 		if IsValid(ply.organism) then
 			ply.organism.holdingbreath = false
@@ -417,26 +312,11 @@ hook.Add("PlayerSpawn", "Fake", function(ply)
 	ply:SetCanZoom(false)
 end)
 
--- local FrameTimeS
--- local LastTick = 0
-
-
--- hook.Add("Tick", "FPS Check", function()
--- 	FrameTimeS = SysTime() - (LastTick or SysTime())
--- 	LastTick = SysTime()
-
--- 	local tps = 1 / FrameTimeS
-
--- 	if tps < 66 then
--- 		print(tps)
--- 	end
--- end)
-
 hg.ragdollFake = hg.ragdollFake or {}
---local ragdollFake = hg.ragdollFake
+
 hook.Add("DoPlayerDeath", "Fake", function(ply)
 	local ragdoll = ply.FakeRagdoll
-	--if not IsValid(ragdoll) then return end
+
 	if (not ply.Removed) and not IsValid(ragdoll) then
 		ragdoll = Ragdoll_Create(ply)
 		ply.FakeRagdoll = ragdoll
@@ -445,7 +325,7 @@ hook.Add("DoPlayerDeath", "Fake", function(ply)
 
 	if not IsValid(ragdoll) then return end
 	if IsValid(ragdoll.bull) then ragdoll.bull:Remove() end
-	
+
 	ply:SetNWEntity("RagdollDeath", ragdoll)
 	ragdoll:SetNetVar("wounds", ply:GetNetVar("wounds"))
 	ragdoll:SetNetVar("arterialwounds", ply:GetNetVar("arterialwounds"))
@@ -457,11 +337,10 @@ hook.Add("PostPlayerDeath", "Garbage", function(ply)
 	if IsValid(ragdoll) then ragdoll:Remove() end
 
 	ply:SetNWEntity("FakeRagdoll", NULL)
-	--ply:SetNWEntity("RagdollDeath", ragdoll)
 
 	ply.FakeRagdoll = nil
 	hg.ragdollFake[ply] = nil
-	
+
 	ply.fakecd = 0
 	ply.viewmode = 3
 end)
@@ -482,7 +361,7 @@ hg.humans_cached = hg.humans_cached or {}
 hook.Add("SetupPlayerVisibility", "fuckragdolls", function( ply )
 	local queue = hg.queue_ragdolls
 
-	for ent, tbl in pairs(queue) do--ему, наверное, больно
+	for ent, tbl in pairs(queue) do
 		if not IsValid(ent) then queue[ent] = nil continue end
 		if queue[ent].count == #hg.humans_cached then queue[ent] = nil continue end
 		if queue[ent][ply] then continue end
@@ -498,7 +377,7 @@ end)
 
 hook.Add("SetupPlayerVisibility", "ragdollview", function( ply )
 	local ent = IsValid(hg.ragdollFake[ply]) and hg.ragdollFake[ply] or ply:GetNWEntity("FakeRagdoll")
-	
+
 	if IsValid(ent) and !ent:TestPVS(ply) then
 		AddOriginToPVS(ent:GetPos())
 	end
@@ -541,7 +420,7 @@ function hg.Fake(ply, huyragdoll, no_freemove, force)
 	if ply.InVehicle and ply:InVehicle() and not force then return end
 	if not IsValid(huyragdoll) and (not IsValid(ply) or IsValid(ply.FakeRagdoll) or not (ply:IsPlayer() and ply:Alive())) then return end
 	local ragdoll = IsValid(huyragdoll) and huyragdoll or Ragdoll_Create(ply, true)
-	
+
 	if IsValid(huyragdoll) then
 		ply:SetNWEntity("FakeRagdoll", ragdoll)
 		ragdoll:SetNWEntity("ply", ply)
@@ -549,11 +428,11 @@ function hg.Fake(ply, huyragdoll, no_freemove, force)
 	end
 	if !IsValid(ragdoll) then return end
 	ragdoll:CallOnRemove("Fake", RemoveRag, ply)
-	ply.fakecd = CurTime() + 1// + ply.organism.shock / 10
+	ply.fakecd = CurTime() + 1
 	NET_Fake(ragdoll, ply)
-	
+
 	ply.FakeRagdoll = ragdoll
-	
+
 	if IsValid(ply.FakeRagdollOld) then
 		ply.FakeRagdollOld:Remove()
 	end
@@ -565,27 +444,20 @@ function hg.Fake(ply, huyragdoll, no_freemove, force)
 		timer.Remove("faking_up"..ply:EntIndex(), 0)
 	end
 
-	//if ragdoll:GetVelocity():LengthSqr() < (200 * 200) or ply:InVehicle() then hg.SetFreemove(ply,not no_freemove) end
-
 	hg.ragdollFake[ply] = ragdoll
 	ply.ActiveWeapon = ply:GetActiveWeapon()
 	hook_Run("Fake", ply, ragdoll, listArmor)
-	
-	--timer.Simple(0,function()
+
 		ply:DrawWorldModel(false)
 		ply:DrawShadow(false)
 		local pos = ply:GetPos()
-		//ply:Spectate(OBS_MODE_FREEZECAM)
-		//ply:UnSpectate()
-		--ply:SetSolidFlags(bit.bor(ply:GetSolidFlags(), FSOLID_NOT_SOLID, FSOLID_TRIGGER, FSOLID_USE_TRIGGER_BOUNDS))
+
 		ply:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE)
 		ply:SetPos(pos)
 		ply:SetNoDraw(false)
 		ply:SetRenderMode(RENDERMODE_NONE)
-		//ply:ExitVehicle()
-	--end)
 
-	timer.Simple(0, function() -- bandaid shitfix for now
+	timer.Simple(0, function()
 		ply:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE)
 	end)
 
@@ -594,9 +466,9 @@ function hg.Fake(ply, huyragdoll, no_freemove, force)
 	ply:AllowFlashlight(false)
 	if ply:IsOnFire() then
 		timer.Simple(0.1,function()
-			--ragdoll:Ignite(30 * ((ragdoll.shouldburn or 0) + 1),16)
+
 			ply:Extinguish()
-			--ragdoll.fires = ply.fires
+
 			if ply.fires then
 				for fire, pos in pairs(ply.fires) do
 					fire:Remove()
@@ -615,7 +487,7 @@ function hg.SetFreemove(ply, set)
 	if set then
 		ply.lastFakeTime = hg_ragdollcombat:GetBool() and 9999 or 1
 		ply.lastFake = CurTime() + ply.lastFakeTime
-		//ply:SetNetVar("lastFake", ply.lastFake)
+
 		ply:SetMoveType(MOVETYPE_WALK)
 		local hull = Vector(5,5,5)
 		ply:SetHull(-Vector(hull,hull,0),Vector(hull,hull,72))
@@ -625,10 +497,7 @@ function hg.SetFreemove(ply, set)
 	else
 		ply.lastFake = 0
 		ply.lastFakeTime = 0
-		//ply:SetNetVar("lastFake",0)
-		//if ply:GetMoveType() != (ply:InVehicle() and MOVETYPE_NOCLIP or MOVETYPE_NONE) then
-			//ply:SetMoveType(ply:InVehicle() and MOVETYPE_NOCLIP or MOVETYPE_NONE)
-		//end
+
 		ply:SetMoveType(MOVETYPE_NOCLIP)
 		local hull = Vector(1, 1, 1)
 		local hull2 = Vector(1, 1, 0)
@@ -675,7 +544,7 @@ end)
 
 hook.Add("Player Spawn", "fuckingremoveragdoll", function(ply)
 	local ragdoll = ply:GetNWEntity("FakeRagdoll")
-	
+
 	if IsValid(ragdoll) then
 		ragdoll:SetNWEntity("ply", NULL)
 	end
@@ -691,7 +560,7 @@ end)
 local util_TraceLine = util.TraceLine
 function hg.FakeUp(ply, forced, instant)
 	local ragdoll = ply.FakeRagdoll
-	
+
 	if !IsValid(ragdoll) then return end
 
 	if ragdoll.welds then
@@ -701,20 +570,10 @@ function hg.FakeUp(ply, forced, instant)
 			ply:ExitVehicle()
 		end
 
-		//ragdoll.removingwelds = true
-		//for i, weld in pairs(ragdoll.welds) do
-		//	if IsValid(weld) then weld:Remove() end
-		//end
-		//
-		//ragdoll.welds = nil
-		//ragdoll.removingwelds = nil
-		//ragdoll:SetParent()
-		
-		--table.RemoveByValue(veh.rags, ragdoll)
 	end
 
 	if ply:InVehicle() then forced = true end
-	//if ply:InVehicle() and ply:GetVehicle():WaterLevel() >= 3 then return end
+
 	if not forced and (not IsValid(ply.FakeRagdoll) or not ply:Alive() or hook_Run("Should Fake Up", ply) ~= nil) then return false end
 	ply.fakecd = CurTime() + 2
 
@@ -725,7 +584,7 @@ function hg.FakeUp(ply, forced, instant)
 	local ent = (IsValid(ragdoll) and ragdoll or ply)
 	local posit = ent:GetBoneMatrix(ent:LookupBone("ValveBiped.Bip01_Pelvis")):GetTranslation()
 	local pos = hg.GetUpPos(ply, posit, 50, 50)
-	
+
 	if not pos and not forced then return end
 	local oldpos = pos
 
@@ -735,7 +594,7 @@ function hg.FakeUp(ply, forced, instant)
 	ply.OldRagdoll = ragdoll
 	ply:SetNWEntity("FakeRagdollOld", ragdoll)
 	ply.FakeRagdoll = nil
-	
+
 	ply:ConCommand("+duck")
 	timer.Simple(0.5,function()
 		if IsValid(ply) then
@@ -745,16 +604,15 @@ function hg.FakeUp(ply, forced, instant)
 
 	if IsValid(ragdoll) and ragdoll:IsOnFire() then
 		timer.Simple(0.1,function()
-			--ply.fires = ragdoll.fires
-			--ply:Ignite(30 * ((ply.shouldburn or 0) + 1),16)
+
 			if ragdoll.fires then
 				for fire, pos in pairs(ragdoll.fires) do
 					fire:Remove()
 					local fire = CreateVFire(ply, ply:GetPos(), vector_up, 50, ply)
 				end
 			end
-		end)--]]
-	end	
+		end)
+	end
 
 	if IsValid(ragdoll) and ragdoll.welds then
 		for i, weld in pairs(ragdoll.welds) do
@@ -768,9 +626,9 @@ function hg.FakeUp(ply, forced, instant)
 	local hp, armor = ply:Health(), ply:Armor()
 	local ang, wep = ply:EyeAngles(), ply:GetActiveWeapon()
 	hg.OverrideSpawn(ply)
-	//local pos = ply:GetPos()
+
 	ply:Spawn()
-	//ply:SetPos(pos)
+
 	ply:SetRenderMode(RENDERMODE_NORMAL)
 	ply.LastFakeUp = CurTime()
 	ply:DrawWorldModel(true)
@@ -778,7 +636,7 @@ function hg.FakeUp(ply, forced, instant)
 	ply:SetArmor(armor)
 	ply:SetEyeAngles(ang)
 	if IsValid(wep) then ply:SelectWeapon(wep:GetClass()) else ply:SelectWeapon("weapon_hands_sh") end
-	
+
 	if IsValid(ragdoll) and ragdoll.rope_attach then
 		ply:PickupWeapon(ragdoll.rope_attach)
 		ragdoll.rope_attach = nil
@@ -788,27 +646,25 @@ function hg.FakeUp(ply, forced, instant)
 
 	if IsValid(ragdoll) then
 		local phys = ragdoll:GetPhysicsObject()
-		ply:SetVelocity(-ply:GetVelocity() + (IsValid(phys) and phys:GetVelocity() or vecZero)) --как это работает б**н
-		--hg.SetFreemove(ply, true)
+		ply:SetVelocity(-ply:GetVelocity() + (IsValid(phys) and phys:GetVelocity() or vecZero))
 
 		if pos then
 			ply:SetPos(pos)
 		end
 
 		ragdoll.override = true
-		
+
 		NET_Up(ply)
 
 		if not instant then
 			ply:SetRenderMode(RENDERMODE_NORMAL)
-			--ply:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
-			--ply:SetSolidFlags(bit.bor(ply:GetSolidFlags(), FSOLID_NOT_SOLID, FSOLID_TRIGGER, FSOLID_USE_TRIGGER_BOUNDS))
+
 			ply:DrawShadow(false)
 
 			timer.Create("faking_up"..ply:EntIndex(), 1, 1, function()
 				if IsValid(ragdoll) then
 					local posit = ragdoll:GetBoneMatrix(ragdoll:LookupBone("ValveBiped.Bip01_Spine4")):GetTranslation()
-					//pos = hg.GetUpPos(ply, posit, 50, 50) or oldpos
+
 				end
 
 				if IsValid(ragdoll) then
@@ -821,12 +677,11 @@ function hg.FakeUp(ply, forced, instant)
 				ply:SetRenderMode(RENDERMODE_NORMAL)
 				ply:SetCollisionGroup(COLLISION_GROUP_PLAYER)
 
-				--ply:SetSolidFlags(bit.band(ply:GetSolidFlags(), bit.bnot(FSOLID_NOT_SOLID), bit.bnot(FSOLID_TRIGGER), bit.bnot(FSOLID_USE_TRIGGER_BOUNDS)))
 				hg.ragdollFake[ply] = nil
 				ply:SetMoveType(MOVETYPE_WALK)
 
 				if pos then
-					--ply:SetPos(pos)
+
 				end
 			end)
 		else
@@ -834,8 +689,7 @@ function hg.FakeUp(ply, forced, instant)
 			ply:SetRenderMode(RENDERMODE_NORMAL)
 			ply:SetCollisionGroup(ply.switchingseat and COLLISION_GROUP_IN_VEHICLE or COLLISION_GROUP_PLAYER)
 			ply:SetMoveType(ply.switchingseat and MOVETYPE_NONE or MOVETYPE_WALK)
-			
-			--ply:SetSolidFlags(bit.band(ply:GetSolidFlags(), bit.bnot(FSOLID_NOT_SOLID), bit.bnot(FSOLID_TRIGGER), bit.bnot(FSOLID_USE_TRIGGER_BOUNDS)))
+
 			hg.ragdollFake[ply] = nil
 			NET_Up(ply)
 			ply:SetNWEntity("FakeRagdoll",NULL)
@@ -849,11 +703,6 @@ function hg.FakeUp(ply, forced, instant)
 	if IsValid(ragdoll) then ragdoll:SetNWEntity("ply", NULL) end
 	if ply.oldCanUseFlashlight and not ply:CanUseFlashlight() then ply:AllowFlashlight(true) end
 	local time = (ply.lastFake or 0) > 0 and 0.1 or 1.5
-	--[[timer.Simple(time,function()
-		if IsValid(ply) then
-			ply:ConCommand("-duck")
-		end
-	end)--]]
 
 	return true
 end
@@ -918,25 +767,24 @@ end)
 
 hook.Add("CanPlayerEnterVehicle","fake_enterveh",function(ply, veh)
 	if hg.RemoveDeadBodies(veh) then return false end
-	
+
 	local parent = veh:GetParent()
 	if IsValid(parent) and parent:GetVelocity():LengthSqr() > 256 * 256 and !ply.switchingseat then return false end
-	
-	return true//not IsValid(ply.FakeRagdoll)// or IsValid(ply.wasveh)
+
+	return true
 end)
 
 hook.Add("PlayerEnteredVehicle","allowweapons",function(ply,veh,role)
 	ply:SetAllowWeaponsInVehicle(true)
 	if hg.NoFakeInCar(veh) then return end
 	ply:SetEyeAngles(angle_zero)
-	//local veh2 = veh:GetParent()
 
 	timer.Create("EnterVehicleRag"..ply:EntIndex(), (veh:GetVehicleClass() == "Pod") and 0.5 or 1, 1, function()
 		ply:SetEyeAngles(angle_zero)
 		hg.Fake(ply, nil, nil, true)
-		
+
 		ply:SetCollisionGroup(COLLISION_GROUP_PLAYER)
-		--ply:SetSolidFlags(bit.band(ply:GetSolidFlags(), bit.bnot(FSOLID_NOT_SOLID), bit.bnot(FSOLID_TRIGGER), bit.bnot(FSOLID_USE_TRIGGER_BOUNDS)))
+
 	end)
 
 	if (role != 0) or (veh:GetClass() == "prop_vehicle_prisoner_pod") then
@@ -947,28 +795,13 @@ hook.Add("PlayerEnteredVehicle","allowweapons",function(ply,veh,role)
 end)
 
 hook.Add("HG_OnWakeOtrub", "enterveh", function(ply)
-	//if Glide and IsValid(ply.glideveh) then
-	//	Glide.ActivateInput(ply, ply.glideveh, ply.seat)
-	//	
-	//end
-	//if IsValid(ply.wasveh) then
-	//	ply:EnterVehicle(ply.wasveh)
-	//	ply.wasveh = nil
-	//end
+
 end)
 
 hook.Add("HG_OnOtrub", "leaveveh", function(ply)
 	if ply:InVehicle() then
 		local veh = ply:GetVehicle()
-		
-		//if Glide and veh.IsGlideVehicle then
-		//	Glide.DeactivateInput(ply)
-		//	ply.glideveh = veh
-		//	ply.seat = ply:GlideGetSeatIndex()
-		//end
-		//ply.wasveh = veh
-		//hg.leaveveh = true
-		//ply:ExitVehicle()
+
 	end
 end)
 
@@ -979,18 +812,15 @@ hook.Add("PlayerLeaveVehicle","allowweapons",function(ply,veh)
 		timer.Remove("EnterVehicleRag"..ply:EntIndex())
 	end
 
-	//if !hg.fallfromveh then
-	//	hg.FakeUp(ply, true)
-	//end
 	local ragdoll = ply.FakeRagdoll
 	local fast = IsValid(ragdoll) and ragdoll:GetVelocity():Length() > 200
-	
+
 	if (!fast or ply.switchingseat) and ply:Alive() then
 		hg.FakeUp(ply, true, ply.switchingseat)
 	else
 		if ragdoll then
 			ply:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE)
-			--ply:SetSolidFlags(bit.bor(ply:GetSolidFlags(), FSOLID_NOT_SOLID, FSOLID_TRIGGER, FSOLID_USE_TRIGGER_BOUNDS))
+
 			ragdoll.removingwelds = true
 
 			if ragdoll.welds then
@@ -998,7 +828,7 @@ hook.Add("PlayerLeaveVehicle","allowweapons",function(ply,veh)
 					if IsValid(weld) then weld:Remove() end
 				end
 			end
-			
+
 			ragdoll.welds = nil
 			ragdoll.removingwelds = nil
 			ragdoll:SetParent()
@@ -1011,26 +841,15 @@ hook.Add("PlayerLeaveVehicle","allowweapons",function(ply,veh)
 			end
 		else
 			ply:SetCollisionGroup(COLLISION_GROUP_PLAYER)
-			--ply:SetSolidFlags(bit.band(ply:GetSolidFlags(), bit.bnot(FSOLID_NOT_SOLID), bit.bnot(FSOLID_TRIGGER), bit.bnot(FSOLID_USE_TRIGGER_BOUNDS)))
+
 		end
 	end
 
 	hg.fallfromveh = nil
 end)
 
-/*
-local PLAYER = FindMetaTable("Player")
-
-hg.ExitVehicle = hg.ExitVehicle or PLAYER.ExitVehicle
-
-function PLAYER:ExitVehicle()
-	//if hg.leaveveh then hg.ExitVehicle(self) hg.leaveveh = nil end
-	hg.ExitVehicle(self)
-end
-*/
-
 hook.Add("CanExitVehicle","huyhuy",function(ply, veh)
-	//return false
+
 end)
 
 local poses = {}
@@ -1044,7 +863,7 @@ function hg.GetUpPos(target,pos,tries,starttries)
 	if tries <= 0 then
 		table.sort(poses,function(a,b) return a[2] < b[2] end)
 
-		local vec = (#poses > 0 and Vector(poses[1][1],poses[1][2],poses[1][3])) or target:GetPos() -- or pos - vector_up * 72
+		local vec = (#poses > 0 and Vector(poses[1][1],poses[1][2],poses[1][3])) or target:GetPos()
 
 		poses = {}
 
@@ -1055,7 +874,7 @@ function hg.GetUpPos(target,pos,tries,starttries)
 			t.mins = mins
 			t.maxs = maxs
 			t.filter = {target,target.FakeRagdoll,target.ply}
-			--t.mask = MASK_PLAYERSOLID
+
 			t.collisiongroup = COLLISION_GROUP_PLAYER
 			local tr = util.TraceHull( t )
 
@@ -1066,7 +885,6 @@ function hg.GetUpPos(target,pos,tries,starttries)
 	end
 	tries = tries - 1
 
-
 	local offset = tries == starttries and vector_origin or VectorRand(-32,32)
 	local newpos = pos + offset
 
@@ -1074,7 +892,7 @@ function hg.GetUpPos(target,pos,tries,starttries)
 	t.start = pos
 	t.endpos = newpos
 	t.filter = {target,target.FakeRagdoll,target.ply}
-	--t.mask = MASK_PLAYERSOLID
+
 	t.collisiongroup = COLLISION_GROUP_PLAYER
 
 	local tr = util.TraceLine( t )
@@ -1086,10 +904,10 @@ function hg.GetUpPos(target,pos,tries,starttries)
 		t.mins = mins
 		t.maxs = maxs
 		t.filter = {target,target.FakeRagdoll,target.ply}
-		--t.mask = MASK_PLAYERSOLID
+
 		t.collisiongroup = COLLISION_GROUP_PLAYER
 		local tr = util.TraceHull( t )
-		
+
 		if not tr.Hit then
 			table.insert(poses,{newpos,(tr.HitPos - pos):LengthSqr()})
 		end
@@ -1097,90 +915,6 @@ function hg.GetUpPos(target,pos,tries,starttries)
 
 	return hg.GetUpPos(target,pos,tries,starttries)
 end
-/*
-local ent = Entity(1)
-local ragdoll = ents.Create("prop_ragdoll")
-ragdoll.Appearance = ent.Appearance
-ragdoll:SetModel(ent:GetModel())
-ragdoll:SetPos(ent:GetPos())
-ragdoll:Spawn()
-ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
-ent:SetRenderMode(RENDERMODE_NONE)
-ent:SetNWEntity("huy",ragdoll)
-ApplyAppearanceRagdoll(ent,ragdoll)
-hook.Add("Think","ragdollShittt",function()
-	local ragbonecount = ragdoll:GetBoneCount()
-	for i = 0, ragbonecount - 1 do
-		local bonename = ragdoll:GetBoneName(i)
-		local boneent = ent:LookupBone(bonename)
-		--[[ for _,name in ipairs(boneDamage) do
-			if name==bonename and gotdamaged==true then return end
-		end]]
-		if boneent then
-			local bonepos,boneang = ent:GetBonePosition(ent:TranslatePhysBoneToBone(i))
-			if bonepos and boneang then
-				local bonerag = ragdoll:LookupBone(bonename)
-				if bonerag then
-					if bonerag == 0 then bonepos = ent:GetPos() end
-					local physobj = ragdoll:GetPhysicsObjectNum(bonerag)
-					if IsValid(physobj) then
-						local p = {}
-						p.secondstoarrive = 0.01
-						p.pos = bonepos
-						p.angle = boneang
-						p.maxangular = 650
-						p.maxangulardamp = 500
-						p.maxspeed = 45
-						p.maxspeeddamp = 35
-						p.teleportdistance = 0
-
-						physobj:Wake()
-						physobj:ComputeShadowControl(p)
-					end
-				end
-			end
-		end
-	end
-end)
-*/
---[[local ents_FindInSphere = ents.FindInSphere
-local sphereRadius = 25
-hook.Add("Move","PushAwayRagdolls",function(ply, mv)
-	do return end
-	if not ply:Alive() or not hg.GetCurrentCharacter(ply):IsPlayer() then return end
-    local sphereCenter = ply:GetPos()
-    local entities = ents_FindInSphere(sphereCenter, sphereRadius)
-
-    for _, ent in ipairs(entities) do
-		if ent:GetCollisionGroup() == COLLISION_GROUP_WEAPON then
-			for i = 0, ent:GetPhysicsObjectCount() - 1 do
-				local physObj = ent:GetPhysicsObjectNum(i)
-				local limbPos = physObj:GetPos()
-
-				local pushDir = (limbPos - sphereCenter):GetNormalized()
-				if limbPos:Distance(sphereCenter) < sphereRadius then
-					physObj:ApplyForceCenter(pushDir * math.min(ply:GetVelocity():Length()/3,200) *  (physObj:GetMass()/5))
-				end
-				--ply:SetVelocity(-pushDir * 2)
-			end
-		end
-
-		if not ent:IsRagdoll() then continue end
-		ent.pushCooldown = ent.pushCooldown or 0
-		if ent.pushCooldown < CurTime() then
-			if ply:GetVelocity():Length() > 200 then
-				--print(ply:EyeAngles()[1])
-				if math.random(1,ply:EyeAngles()[1] < 20 and 3 or 10) == 2 then
-					hg.LightStunPlayer(ply,2)
-				else
-					--ply:SetVelocity(-ply:GetVelocity())
-					ply:SetVelocity(-ply:GetVelocity()*0.5)
-				end
-			end
-		end
-		ent.pushCooldown = CurTime() + 0.5
-    end
-end)]]
 
 local mRandom = math.random
 hook.Add("Ragdoll Collide", "FallSounds", function(rag, data)
@@ -1191,12 +925,6 @@ hook.Add("Ragdoll Collide", "FallSounds", function(rag, data)
 	if mRandom(3) == 2 then
 		rag:EmitSound("physics/flesh/flesh_impact_hard"..mRandom(6)..".wav", 55, mRandom(85, 105), 1, CHAN_AUTO)
 	end
-
-	--[[local ply = rag:GetNWEntity("ply")
-	if IsValid(ply) and ply:Alive() and not ply.organism.otrub then
-		local mul = math.Clamp(data.OurOldVelocity:LengthSqr() / 240000, 0.25, 1.2)
-		ply:ViewPunch(AngleRand(-20 * mul, 20 * mul))
-	end]]
 
 	rag.NextSND = data.DeltaTime + 1
 end)

@@ -46,7 +46,7 @@ local function getIconThing(i)
         return Icon, HaveIcon, Overide, true
     end
 end
-local colRed = Color(255, 0, 0, 255)
+local colGray = Color(210, 210, 210, 255)
 local function OpenContainer( ent )
     local name = "Container"
 	local sizeX, sizeY = ScrW() / 3, ScrH() / 2.5
@@ -83,9 +83,9 @@ local function OpenContainer( ent )
 
 	zbContainerMenu.Paint = function(self, w, h)
 		draw.RoundedBox(0, 2.5, 2.5, w - 5, h - 5, Color(0, 0, 0, 140))
-		surface.SetDrawColor(255, 0, 0, 128)
+		surface.SetDrawColor(200, 200, 200, 140)
 		surface.DrawOutlinedRect(0, 0, w, h, 2.5)
-		surface.SetDrawColor(92,0,0,240)
+		surface.SetDrawColor(35, 35, 35, 240)
 		surface.DrawRect(w / 2 - 100, 10,200,20)
 		draw.DrawText(name, "HomigradFontSmall", w / 2, 10, color_white, TEXT_ALIGN_CENTER)
 		draw.DrawText("R - Close", "HomigradFontSmall", w *0.012, h - h*0.055 , Color(255,255,255,15), TEXT_ALIGN_LEFT)
@@ -109,7 +109,7 @@ local function OpenContainer( ent )
 	DScrollPanel:DockMargin(2,8,2,20)
 	function DScrollPanel:Paint(w, h)
 		draw.RoundedBox(0, 0, 0, w, h, Color(0, 0, 0, 100))
-		surface.SetDrawColor(255, 0, 0, 128)
+		surface.SetDrawColor(200, 200, 200, 140)
 		surface.DrawOutlinedRect(0, 0, w, h, 2.5)
 	end
 	local sbar = DScrollPanel:GetVBar()
@@ -118,7 +118,7 @@ local function OpenContainer( ent )
 
 	function sbar:Paint(w, h)
 		draw.RoundedBox(0, 0, 0, w, h, Color(0, 0, 0, 100))
-		surface.SetDrawColor(255, 0, 0, 128)
+		surface.SetDrawColor(200, 200, 200, 140)
 		surface.DrawOutlinedRect(0, 0, w, h, 2.5)
 	end
 	function sbar.btnUp:Paint(w, h)
@@ -126,8 +126,8 @@ local function OpenContainer( ent )
 	function sbar.btnDown:Paint(w, h)
 	end
 	function sbar.btnGrip:Paint(w, h)
-		draw.RoundedBox(0, 0, 0, w, h, Color(148, 0, 0, 100))
-		surface.SetDrawColor(255, 0, 0, 128)
+		draw.RoundedBox(0, 0, 0, w, h, Color(95, 95, 95, 130))
+		surface.SetDrawColor(200, 200, 200, 140)
 		surface.DrawOutlinedRect(0, 0, w, h, 2.5)
 	end
 
@@ -145,6 +145,7 @@ local function OpenContainer( ent )
 		--button:SetSize(0,0)
 		button:SetSize(sizeX / 5.8, sizeY / 5.8)
 		button.Think = function(self)
+			self.HoverLerp = LerpFT(0.15, self.HoverLerp or 0, self:IsHovered() and 1 or 0)
 		end
 		
 		button.DoClick = function()
@@ -161,6 +162,7 @@ local function OpenContainer( ent )
 
 		local name = nameThings(item.class)
 		button.col1 = 100
+		button.HoverLerp = 0
 		button.Paint = function(self, w, h)
 			button.col1 = Lerp(0.1, button.col1, button:IsHovered() and 255 or 100)
 			if button:IsHovered() then
@@ -168,8 +170,9 @@ local function OpenContainer( ent )
 				if (grid.SoundKD or 0) < CurTime() and button.SoundKD < CurTime() then surface.PlaySound("arc9_eft_shared/generic_mag_pouch_out" .. math.random(7) .. ".ogg") end
 				button.SoundKD = CurTime() + 0.1
 			end
-			surface.SetDrawColor(button.col1, 25, 25, 150)
-			surface.DrawRect(0, 0, w, h)
+			local inset = (1 - (button.HoverLerp or 0)) * 3
+			surface.SetDrawColor(button.col1, button.col1, button.col1, 150)
+			surface.DrawRect(inset, inset, w - inset * 2, h - inset * 2)
 			local Icon, HaveIcon, Overide, Quad = getIconThing(item.class)
 			if Icon then
 				button.Icon = button.Icon or (isstring(Icon) and Material(Icon)) or Icon -- Ну тут так, без выбора если что материал будет
@@ -179,8 +182,8 @@ local function OpenContainer( ent )
 				surface.SetDrawColor(255, 255, 255)
 				surface.DrawTexturedRect(Quad and w / 5 + 5 or 0 - 5, 5, Quad and (w / 2 + 2.5) or (w + 10), Quad and h / 1.3 or h - 10)
 			end
-			surface.SetDrawColor(colRed)
-			surface.DrawOutlinedRect(0, 0, w, h, 1)
+			surface.SetDrawColor(colGray)
+			surface.DrawOutlinedRect(0, 0, w, h, 1 + (button.HoverLerp or 0))
 			local Text = language.GetPhrase(name)
 			local SubText = utf8.sub(Text, 14)
 			Text = utf8.sub(Text, 1, 13) .. "\n" .. utf8.sub(Text, 14)
@@ -240,7 +243,9 @@ hook.Add("PostDrawOpaqueRenderables","Draw3D2DFrameContainer",function()
         lerpang[3] = 0
         LocalPlayer():SetEyeAngles(lerpang)
         ang = Angle(0,angle.y,veiwSetup.angles[1]) - (modelOffset[ent:GetModel()] and modelOffset[ent:GetModel()][2] or offsetAng1)
-		vgui.Start3D2D(pos + ang:Forward() * -12.7 - ang:Right() * 7 + ang:Up() * 5, ang, 0.04)
+        local openT = math.Clamp((CurTime() - (zbContainerMenu.Created or CurTime())) / 0.35, 0, 1)
+        local scale = Lerp(math.ease.OutExpo(openT), 0.01, 0.04)
+		vgui.Start3D2D(pos + ang:Forward() * -12.7 - ang:Right() * 7 + ang:Up() * 5, ang, scale)
             zbContainerMenu:Paint3D2D()
             --print("asd")
 		vgui.End3D2D()

@@ -14,6 +14,16 @@ local playervote = {}
 local mappull = {}
 local playerVoteWeight = {}
 
+local mapWhitelist = {
+    ["gm_construct"]                  = true,
+    ["ttt_houndpitspub_a1"]           = true,
+    ["gm_asylum"]                     = true,
+    ["gm_montauk"]                    = true,
+    ["mu_alone_v2"]                   = true,
+    ["hmcd_rooftops_snow"]            = true,
+    ["hmcd_metropolis_extended_ring"] = true,
+}
+
 local function GetMapFamily(map)
     if string.find(string.lower(map), "smalltown") then
         return "smalltown"
@@ -30,17 +40,6 @@ local function GetFamilyMaps(family)
     end
     return familyMaps
 end
-
-local blacklist = {
-    ["gm_construct"] = true, ["gm_flatgrass"] = true, ["gm_altarskforest"] = true, ["gm_renostruct_v2"] = true,
-    ["gm_renostruct_v2_night"] = true, ["gm_city_of_silence"] = true, ["ttt_hogwarts"] = true,
-}
-
-local allowedPrefix = {
-    ["ttt"] = true, ["hmcd"] = true, ["mu"] = true, ["ze"] = false,
-    ["zs"] = true, ["tdm"] = true, ["zb"] = false, ["zbattle"] = false,
-    ["gm"] = true, ["ph"] = true, ["cs"] = true, ["de"] = true
-}
 
 local prefixWeights = {
     ["ttt"] = 18, ["hmcd"] = 19, ["mu"] = 18, ["ze"] = 0,
@@ -84,28 +83,8 @@ end
 local function getmaps()
     table.Empty(mappull)
 
-    local maps = file.Find("maps/*.bsp", "GAME")
-
-    --[[ 
-    if hg and hg.xmas then
-        table.Empty(mappull)
-        mappull = {
-            "cs_office",
-            "cs_drugbust_winter",
-            "gm_zabroshka_winter",
-            "mu_smallotown_v2_snow",
-            "ttt_clue_xmas",
-            "ttt_cosy_winter",
-            "ttt_winterplant_v4"
-        }
-        return 
-    end
-    ]]
-
-    for _, map in ipairs(maps) do
-        map = map:sub(1, -5)
-        local mapstr = map:Split("_")
-        if (allowedPrefix[mapstr[1]] or not string.find(map, "_")) and not blacklist[map] then
+    for map, allowed in pairs(mapWhitelist) do
+        if allowed and file.Exists("maps/" .. map .. ".bsp", "GAME") then
             table.insert(mappull, map)
         end
     end
@@ -141,6 +120,25 @@ hook.Add("InitPostEntity", "zb_GetMaps", function()
     getmaps()
 end)
 
+local function BuildVotersByMap()
+    local voters = {}
+    for idx, map in pairs(playervote) do
+        local voter = Entity(idx)
+        if IsValid(voter) and voter:IsPlayer() then
+            voters[map] = voters[map] or {}
+            table.insert(voters[map], voter:SteamID64())
+        end
+    end
+    return voters
+end
+
+function zb.BroadcastRTVState()
+    net.Start("ZB_RockTheVote_voteCLreg")
+        net.WriteTable(votes)
+        net.WriteTable(BuildVotersByMap())
+    net.Broadcast()
+end
+
 net.Receive("ZB_RockTheVote_vote", function(len, ply)
     if not zb.votestarted then return end
     if cooldown[ply:EntIndex()] and cooldown[ply:EntIndex()] > CurTime() then return end
@@ -151,20 +149,38 @@ net.Receive("ZB_RockTheVote_vote", function(len, ply)
 
     if playervote[playerIdx] and votes[playervote[playerIdx]] then
         votes[playervote[playerIdx]] = votes[playervote[playerIdx]] - (playerVoteWeight[playerIdx] or 1)
+        if votes[playervote[playerIdx]] <= 0 then
+            votes[playervote[playerIdx]] = nil
+        end
     end
 
     local map = net.ReadString()
     if not map or map == "" then return end
-    if map ~= "random" and not table.HasValue(mappull, map) then return end
+    if not table.HasValue(mappull, map) then return end
     playervote[playerIdx] = map
 
     playerVoteWeight[playerIdx] = 1
 
     votes[map] = (votes[map] or 0) + playerVoteWeight[playerIdx]
 
-    net.Start("ZB_RockTheVote_voteCLreg")
-        net.WriteTable(votes)
-    net.Broadcast()
+    zb.BroadcastRTVState()
+end)
+
+hook.Add("PlayerDisconnected", "ZB_RTV_ClearVoteOnDisconnect", function(ply)
+    local idx = ply:EntIndex()
+    if playervote[idx] then
+        local map = playervote[idx]
+        if votes[map] then
+            votes[map] = math.max((votes[map] or 0) - (playerVoteWeight[idx] or 1), 0)
+            if votes[map] <= 0 then votes[map] = nil end
+        end
+        playervote[idx] = nil
+        playerVoteWeight[idx] = nil
+
+        if zb.votestarted then
+            zb.BroadcastRTVState()
+        end
+    end
 end)
 
 
@@ -275,7 +291,7 @@ local function getUniquePrefixes(playedMaps)
                     end
                 end
 
-                if validCount >= 4 then
+                if validCount >= 2 then
                     table.insert(chosen, prefix)
                 end
             end
@@ -295,12 +311,15 @@ local function getMapWeight(map)
     return 1 - (pop / 100) 
 end
 
+local MAPS_IN_POOL = 6
+local MAPS_PER_PREFIX = 2
+
 function zb.StartRTV(time)
     if zb.votestarted then return end
     
     getmaps()
 
-    rtvtime = CurTime() + (time or 45)
+    rtvtime = CurTime() + (time or 15)
 
     local PlayedMaps = {}
     local playedMapsPath = GetDataPath("PlayedMaps.json")
@@ -327,7 +346,7 @@ function zb.StartRTV(time)
                         validCount = validCount + 1
                     end
                 end
-                if validCount >= 4 then
+                if validCount >= 2 then
                     table.insert(possible, prefix)
                 end
             end
@@ -355,7 +374,7 @@ function zb.StartRTV(time)
                 table.insert(validMaps, m)
             end
         end
-        for i = 1, 4 do
+        for i = 1, MAPS_PER_PREFIX do
             if #validMaps == 0 then break end
 
             local totalWeight = 0
@@ -382,31 +401,37 @@ function zb.StartRTV(time)
         end
     end
 
-    if #finalmaps < 12 then
-        local fallbackPrefix = "gm"
-        local fallbackMaps = getMapsByPrefix(fallbackPrefix)
-        local filteredFallback = {}
-        for _, m in ipairs(fallbackMaps) do
-            if not table.HasValue(PlayedMaps, m) then
-                table.insert(filteredFallback, m)
+    if #finalmaps < MAPS_IN_POOL then
+        local remaining = {}
+        for _, m in ipairs(mappull) do
+            if not table.HasValue(finalmaps, m) and not table.HasValue(PlayedMaps, m) then
+                table.insert(remaining, m)
+            end
+        end
+
+        if #remaining == 0 then
+            for _, m in ipairs(mappull) do
+                if not table.HasValue(finalmaps, m) then
+                    table.insert(remaining, m)
+                end
             end
         end
 
         local attempts = 0
-        while #finalmaps < 12 and #filteredFallback > 0 do
+        while #finalmaps < MAPS_IN_POOL and #remaining > 0 do
             attempts = attempts + 1
             if attempts > 300 then
                 break
             end
 
             local totalWeight = 0
-            for _, m in ipairs(filteredFallback) do
+            for _, m in ipairs(remaining) do
                 totalWeight = totalWeight + getMapWeight(m)
             end
 
             local rnd = math.random() * totalWeight
             local selectedIndex = nil
-            for idx, m in ipairs(filteredFallback) do
+            for idx, m in ipairs(remaining) do
                 local weight = getMapWeight(m)
                 if rnd < weight then
                     selectedIndex = idx
@@ -416,19 +441,20 @@ function zb.StartRTV(time)
                 end
             end
 
-            if selectedIndex then
-                table.insert(finalmaps, filteredFallback[selectedIndex])
-                table.remove(filteredFallback, selectedIndex)
-            end
+            if not selectedIndex then selectedIndex = 1 end
+
+            table.insert(finalmaps, remaining[selectedIndex])
+            table.remove(remaining, selectedIndex)
         end
     end
 
-    if #finalmaps == 0 then
-        local rndMap = mappull[ math.random(#mappull) ]
-        table.insert(finalmaps, rndMap)
+    if #finalmaps == 0 and #mappull > 0 then
+        table.insert(finalmaps, mappull[math.random(#mappull)])
     end
 
-    table.insert(finalmaps, "random")
+    while #finalmaps > MAPS_IN_POOL do
+        table.remove(finalmaps)
+    end
 
     net.Start("ZB_RockTheVote_start")
         net.WriteTable(finalmaps)
@@ -436,6 +462,7 @@ function zb.StartRTV(time)
     net.Broadcast()
 
     zb.votestarted = true
+    endStarted = false
 
 
     hook.Add("Think", "RTVThink", zb.ThinkRTV)
@@ -450,7 +477,7 @@ end
 
 COMMANDS.forcertv = {function(ply, args)
 	if not ply:IsAdmin() then ply:ChatPrint("You don't have access") return end
-		zb.StartRTV(20)
+		zb.StartRTV(15)
 	end,
 	0
 }

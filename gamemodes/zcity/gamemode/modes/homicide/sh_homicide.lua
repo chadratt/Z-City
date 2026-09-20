@@ -267,8 +267,12 @@ MODE.ProfessionsRoundTypes = {
 MODE.Professions = {
 	["doctor"] = {
 		Name = "Doctor",
-		SpawnFunction = function(ply)	--; TODO MAKE IT WORK
-			--; It's a bad practice to give professions any weapons or tools
+		SpawnFunction = function(ply)
+			ply:Give("weapon_medkit_sh")
+			ply:Give("weapon_bigbandage_sh")
+			ply:Give("weapon_adrenaline")
+			ply:Give("weapon_morphine")
+			ply:Give("weapon_painkillers")
 		end,
 	},
 	["huntsman"] = {
@@ -280,7 +284,8 @@ MODE.Professions = {
 	["engineer"] = {
 		Name = "Engineer",
 		SpawnFunction = function(ply)
-			--; It's a bad practice to give professions any weapons or tools
+			ply:Give("weapon_hammer")
+			ply:Give("weapon_nailgun")
 		end,
 	},
 	["cook"] = {

@@ -1,13 +1,10 @@
 if CLIENT then
     local isMenuOpen = nil
     zb.availableModes = zb.availableModes or {}
-
     zb.RoundList = zb.RoundList or {}
     zb.nextround = zb.nextround or nil
     zb.forcemode = zb.forcemode or "random"
     local queueManagerInstance = nil
-
-    --;; The worst part of the job is taking the shit you wrote and making it readable
     local COL_BG        = Color(28, 28, 28, 240)
     local COL_BORDER    = Color(75, 75, 75, 255)
     local COL_CAT       = Color(60, 60, 60, 255)
@@ -23,26 +20,19 @@ if CLIENT then
     local COL_TEXT      = Color(235, 235, 235, 235)
     local COL_TEXT_DIM  = Color(140, 140, 140, 220)
     local COL_TOGGLE_BG = Color(28, 28, 28, 255)
-
     local menufont = "Bahnschrift"
-
     surface.CreateFont("ZB_QM_Title",    {font = menufont, size = 26, weight = 500, antialias = true})
     surface.CreateFont("ZB_QM_Category", {font = menufont, size = 21, weight = 400, antialias = true})
     surface.CreateFont("ZB_QM_Item",     {font = menufont, size = 19, weight = 400, antialias = true})
     surface.CreateFont("ZB_QM_Small",    {font = menufont, size = 14, weight = 300, antialias = true})
     surface.CreateFont("ZB_QM_Btn",      {font = menufont, size = 16, weight = 500, antialias = true})
-
     local SND_CLICK   = "shitty/tap_depress.wav"
     local SND_RELEASE = "shitty/tap_release.wav"
     local SND_HOVER   = "shitty/tap-resonant.wav"
-
-
-
     net.Receive("ZB_SendModesInfo", function()
         zb.availableModes = net.ReadTable()
         if IsValid(queueManagerInstance) then queueManagerInstance:RebuildModes() end
     end)
-
     net.Receive("ZB_SendRoundList", function()
         zb.RoundList = net.ReadTable()
         zb.nextround = net.ReadString()
@@ -51,14 +41,12 @@ if CLIENT then
         zb.nextround = nil
         if IsValid(queueManagerInstance) then queueManagerInstance:QueueUpdate() end
     end)
-
     net.Receive("ZB_NotifyRoundListChange", function()
         local playerName = net.ReadString()
         chat.AddText(Color(180, 180, 255), playerName, COL_TEXT, " has modified the game mode queue")
         net.Start("ZB_RequestRoundList")
         net.SendToServer()
     end)
-
     local function GetModeName(key)
         for _, mode in ipairs(zb.availableModes) do
             if mode.key == key then return mode.name end
@@ -68,7 +56,6 @@ if CLIENT then
     local function ForceActive()
         return zb.forcemode and zb.forcemode ~= "random" and zb.forcemode ~= ""
     end
-
     local function DrawFrameBG(self, w, h)
             if hg and hg.DrawBlur then hg.DrawBlur(self, 4) end
             surface.SetDrawColor(COL_BG)
@@ -86,7 +73,6 @@ if CLIENT then
             surface.SetDrawColor(COL_BORDER)
             surface.DrawOutlinedRect(0, 0, w, h, 1)
     end
-
     local function ZcityBUTT(btn, base, hover, txtColor)
         base     = base     or COL_ROW
         hover    = hover    or COL_ROW_HOV
@@ -101,7 +87,6 @@ if CLIENT then
             surface.DrawRect(0, h - 3, w, 3)
         end
     end
-
     local function CreateToggle(parent, getState, onClick)
         local toggle = vgui.Create("DButton", parent)
         toggle:SetText("")
@@ -130,7 +115,6 @@ if CLIENT then
         end
         return toggle
     end
-
     local function StyleScroll(scroll)
             local bar = scroll:GetVBar()
             bar:SetWide(8)
@@ -144,7 +128,6 @@ if CLIENT then
             surface.DrawRect(1, 0, w - 2, h)
         end
     end
-
     local function CreateCategoryBar(parent, text)
         local bar = vgui.Create("DPanel", parent)
         bar:Dock(TOP)
@@ -159,7 +142,6 @@ if CLIENT then
         end
         return bar
     end
-
     local function AddCloseButton(parent, frame)
         local btn = vgui.Create("DButton", parent)
         btn:SetSize(38, 38)
@@ -182,7 +164,6 @@ if CLIENT then
         end
         return btn
     end
-
     local function MakeContent(frame)
         local content = vgui.Create("DPanel", frame)
         content.Paint = nil
@@ -192,7 +173,6 @@ if CLIENT then
         end
         return content
     end
-
     local function CreateAvailableRow(parent, mode, manager)
         local row = vgui.Create("DPanel", parent)
         row:SetTall(54)
@@ -214,7 +194,6 @@ if CLIENT then
             surface.DrawRect(0, h - 3, w, 3)
             draw.RoundedBox(0, 16, h / 2 - 4, 8, 8, statusCol)
             draw.SimpleText(mode.name, "ZB_QM_Item", 34, h / 2 - 8, COL_TEXT, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-            --draw.SimpleText(forced and "proverka" or statusText, "ZB_QM_Small", 34, h / 2 + 11, forced and COL_ORANGE or COL_TEXT_DIM, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         end
         local toggle = CreateToggle(row,
             function() return zb.forcemode == mode.key end,
@@ -394,7 +373,6 @@ if CLIENT then
                 if not IsValid(row) then continue end
                 row.queueIndex = i
                 if row:GetWide() ~= w then row:SetSize(w, ROW_H) end
-
                 local wantCursor = row:IsLocked() and "arrow" or "sizeall"
                 if row.curCursor ~= wantCursor then
                     row:SetCursor(wantCursor)
@@ -408,7 +386,6 @@ if CLIENT then
                 end
             end
         end
-
         local function MakeQueueRow(modeKey)
             local row = vgui.Create("DPanel", queueList)
             row:SetTall(ROW_H)
@@ -477,7 +454,7 @@ if CLIENT then
             removeBtn:SetWide(30)
             removeBtn:Dock(RIGHT)
             removeBtn:DockMargin(4, 9, 12, 9)
-            removeBtn:SetText("✕") --;; fuck images
+            removeBtn:SetText("✕")
             removeBtn:SetCursor("hand")
             ZcityBUTT(removeBtn, COL_ACCENT, COL_ACCENT_H)
             removeBtn.Think = function(self)
@@ -490,13 +467,11 @@ if CLIENT then
             end
             return row
         end
-
         local allowedModes = {
             ["tdm"] = true, ["cstrike"] = true, ["hmcd"] = true,
             ["hl2dm"] = true, ["riot"] = true, ["gwars"] = true,
             ["criresp"] = true,
         }
-
         function frame:RebuildModes()
             dscroll:Clear()
             local filter = (IsValid(searchBar) and searchBar:GetValue() or ""):lower()
@@ -506,7 +481,6 @@ if CLIENT then
                 CreateAvailableRow(dscroll, mode, self)
             end
         end
-
         function frame:QueueUpdate()
             for _, r in ipairs(queueList.rows) do
                 if IsValid(r) then r:Remove() end
@@ -526,27 +500,56 @@ if CLIENT then
             local maxScroll = math.max(0, #zb.RoundList * STRIDE - queueList:GetTall())
             queueList.scrollTarget = math.Clamp(queueList.scrollTarget, 0, maxScroll)
         end
-
         searchBar.OnChange = function()
             frame:RebuildModes()
         end
-
         frame:RebuildModes()
         frame:QueueUpdate()
-
         frame.OnClose = function()
             queueManagerInstance = nil
         end
-
         net.Start("ZB_RequestRoundList")
         net.SendToServer()
     end
-
+    local function BuildGeneralTab(parent, frame)
+        local tab = vgui.Create("DPanel", parent)
+        tab.Paint = nil
+        local function BigButton(text, base, hover)
+            local btn = vgui.Create("DButton", tab)
+            btn:Dock(TOP)
+            btn:DockMargin(14, 12, 14, 0)
+            btn:SetTall(52)
+            btn:SetText(text)
+            btn:SetFont("ZB_QM_Category")
+            btn:SetTextColor(COL_TEXT)
+            btn.OnCursorEntered = function() surface.PlaySound(SND_HOVER) end
+            btn.Paint = function(self, w, h)
+                surface.SetDrawColor(self:IsHovered() and hover or base)
+                surface.DrawRect(0, 0, w, h)
+                surface.SetDrawColor(0, 0, 0, 55)
+                surface.DrawRect(0, h - 3, w, 3)
+            end
+            return btn
+        end
+        local manageBtn = BigButton("Manage Game Mode Queue", COL_ROW, COL_ROW_HOV)
+        manageBtn.DoClick = function()
+            surface.PlaySound(SND_CLICK)
+            OpenQueueManager()
+        end
+        local endBtn = BigButton("End Round", COL_ACCENT, COL_ACCENT_H)
+        endBtn.DoClick = function()
+            surface.PlaySound(SND_CLICK)
+            net.Start("AdminEndRound")
+            net.SendToServer()
+            frame:Close()
+        end
+        return tab
+    end
     local function OpenAdminMenu()
         if IsValid(isMenuOpen) then return end
         local frame = vgui.Create("ZFrame")
         isMenuOpen = frame
-        frame:SetSize(400, 200)
+        frame:SetSize(math.min(980, ScrW() - 80), math.min(640, ScrH() - 80))
         frame:Center()
         frame:SetTitle("")
         frame:SetDraggable(true)
@@ -567,42 +570,30 @@ if CLIENT then
             draw.SimpleText("Admin Panel", "ZB_QM_Title", w / 2, h / 2 - 2, COL_TEXT, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
         AddCloseButton(header, frame)
-        local function BigButton(text, base, hover)
-            local btn = vgui.Create("DButton", content)
-            btn:Dock(TOP)
-            btn:DockMargin(14, 0, 14, 12)
-            btn:SetTall(52)
-            btn:SetText(text)
-            btn:SetFont("ZB_QM_Category")
-            btn:SetTextColor(COL_TEXT)
-            btn.OnCursorEntered = function() surface.PlaySound(SND_HOVER) end
-            btn.Paint = function(self, w, h)
-                surface.SetDrawColor(self:IsHovered() and hover or base)
-                surface.DrawRect(0, 0, w, h)
-                surface.SetDrawColor(0, 0, 0, 55)
-                surface.DrawRect(0, h - 3, w, 3)
-            end
-            return btn
+        local sheet = vgui.Create("DPropertySheet", content)
+        sheet:Dock(FILL)
+        sheet:DockMargin(0, 0, 0, 0)
+        sheet.Paint = function(self, w, h)
+            surface.SetDrawColor(COL_CAT)
+            surface.DrawRect(0, 0, w, h)
         end
-
-        local manageBtn = BigButton("Manage Game Mode Queue", COL_ROW, COL_ROW_HOV)
-        manageBtn.DoClick = function()
-            surface.PlaySound(SND_CLICK)
-            OpenQueueManager()
+        sheet:AddSheet("GENERAL", BuildGeneralTab(sheet, frame), nil, false, false, "General admin actions")
+        if zb.AO and zb.AO.BuildMapTab then
+            sheet:AddSheet("MAP", zb.AO.BuildMapTab(sheet), nil, false, false, "Live map overview")
         end
-
-        local endBtn = BigButton("End Round", COL_ACCENT, COL_ACCENT_H)
-        endBtn.DoClick = function()
-            surface.PlaySound(SND_CLICK)
-            net.Start("AdminEndRound")
-            net.SendToServer()
-            frame:Close()
+        if zb.AO and zb.AO.BuildRoundTab then
+            sheet:AddSheet("ROUND", zb.AO.BuildRoundTab(sheet), nil, false, false, "Players in this round")
+        end
+        if zb.AO and zb.AO.Subscribe then
+            zb.AO.Subscribe(true)
         end
         frame.OnClose = function()
             isMenuOpen = false
+            if zb.AO and zb.AO.Subscribe then
+                zb.AO.Subscribe(false)
+            end
         end
     end
-
     hook.Add("InitPostEntity", "RequestModeData", function()
         if LocalPlayer():IsAdmin() then
             timer.Simple(2, function()
@@ -611,9 +602,7 @@ if CLIENT then
             end)
         end
     end)
-
     local f6Key = KEY_F6
-
     hook.Add("PlayerButtonDown", "OpenAdminMenuF6", function(ply, key)
         if key == f6Key and LocalPlayer():IsAdmin() and not IsValid(isMenuOpen) then
             OpenAdminMenu()

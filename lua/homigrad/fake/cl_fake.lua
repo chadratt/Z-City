@@ -508,16 +508,20 @@ hook.Add("RagdollEntityCreated", "RagdollFinder", function(ply, ent, key)
 	ragdoll = IsValid(ragdoll) and ragdoll
 	
 	if ply == lply then
-		follow = ragdoll
+		local inDeathGrace = lply.HG_DeathFreeze and CurTime() < lply.HG_DeathFreeze.endTime
 
-		if follow and hg.IsChanged(follow,1,tblfollow) then
-			if IsValid(tblfollow[1]) then
-				//tblfollow[1]:ManipulateBoneScale(tblfollow[1]:LookupBone("ValveBiped.Bip01_Head1"),vecFull)
-			elseif IsValid(follow) and not follow:GetManipulateBoneScale(follow:LookupBone("ValveBiped.Bip01_Head1")):IsEqualTol(vecZero,0.001) then
-				//follow:ManipulateBoneScale(follow:LookupBone("ValveBiped.Bip01_Head1"),vecPochtiZero)
+		if not inDeathGrace then
+			follow = ragdoll
+
+			if follow and hg.IsChanged(follow,1,tblfollow) then
+				if IsValid(tblfollow[1]) then
+					//tblfollow[1]:ManipulateBoneScale(tblfollow[1]:LookupBone("ValveBiped.Bip01_Head1"),vecFull)
+				elseif IsValid(follow) and not follow:GetManipulateBoneScale(follow:LookupBone("ValveBiped.Bip01_Head1")):IsEqualTol(vecZero,0.001) then
+					//follow:ManipulateBoneScale(follow:LookupBone("ValveBiped.Bip01_Head1"),vecPochtiZero)
+				end
+
+				tblfollow[1] = follow
 			end
-
-			tblfollow[1] = follow
 		end
 	end
 

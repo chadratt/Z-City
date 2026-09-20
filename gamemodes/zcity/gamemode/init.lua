@@ -239,6 +239,7 @@ util.AddNetworkString("ZB_ChooseSpecPly")
 
 net.Receive("ZB_ChooseSpecPly",function(len,ply)
 	if ply:Alive() then return end
+	if ply.deathFrozenUntil and CurTime() < ply.deathFrozenUntil then return end
 	
 	local key = net.ReadInt(32)
 	local tbl = zb:CheckAlive()
@@ -293,6 +294,13 @@ end)
 hook.Add("SetupPlayerVisibility", "spectPVS", function(ply, viewent)
 	if ply:Alive() then return end
 
+	if ply.deathFrozenUntil and CurTime() < ply.deathFrozenUntil then
+		if ply.deathFrozenPos then
+			AddOriginToPVS(ply.deathFrozenPos)
+		end
+		return
+	end
+
 	local entity = ply.chosenSpectEntity
 
 	if IsValid(entity) and !entity:TestPVS(ply) then
@@ -300,8 +308,13 @@ hook.Add("SetupPlayerVisibility", "spectPVS", function(ply, viewent)
 	end
 end)
 
+local DEATH_SPECTATE_DELAY = 7
+
+util.AddNetworkString("HG_DeathFreeze")
+
 hook.Add("PlayerDeathThink", "spectNetwork", function(ply)
 	if ply:Alive() then return end
+	if ply.deathFrozenUntil and CurTime() < ply.deathFrozenUntil then return end
 	//ply:Spectate(OBS_MODE_ROAMING)
 
 	local ent = ply.chosenSpectEntity or player.GetAll()[1]
@@ -354,8 +367,18 @@ end
 function GM:PlayerDeath(ply)
 	ply.lastSpectTarget = nil
 	ply.chosenSpectEntity = nil
-	
-	ply:Spectate(OBS_MODE_ROAMING)
+
+	local eyePos = ply:EyePos()
+	local eyeAng = ply:EyeAngles()
+
+	ply.deathFrozenPos = eyePos
+	ply.deathFrozenUntil = CurTime() + DEATH_SPECTATE_DELAY
+
+	net.Start("HG_DeathFreeze")
+	net.WriteVector(eyePos)
+	net.WriteAngle(eyeAng)
+	net.Send(ply)
+
 	ply:SetHull(-hullscale,hullscale)
 	ply:SetHullDuck(-hullscale,hullscale)
 	
@@ -363,8 +386,10 @@ function GM:PlayerDeath(ply)
 	ply.chosenspect = ply:EntIndex()
 	ply.viewmode = 1 
 	
-	timer.Simple(0.1, function()
+	timer.Simple(DEATH_SPECTATE_DELAY, function()
 		if IsValid(ply) and not ply:Alive() then
+			ply:Spectate(OBS_MODE_ROAMING)
+
 			local alivePlayers = zb:CheckAlive()
 			if #alivePlayers > 0 then
 				ply.chosenSpectEntity = alivePlayers[1]

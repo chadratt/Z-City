@@ -11,6 +11,10 @@ zb.GuiltSQL.PlayerInstances = zb.GuiltSQL.PlayerInstances or {}
 
 local hg_developer = ConVarExists("hg_developer") and GetConVar("hg_developer") or CreateConVar("hg_developer",0,FCVAR_SERVER_CAN_EXECUTE,"Toggle developer mode (enables damage traces)",0,1)
 
+function zb.IsKarmaImmune(ply)
+    return IsValid(ply) and ply.IsPlayer and ply:IsPlayer() and ply.IsAdmin and ply:IsAdmin()
+end
+
 hook.Add("DatabaseConnected", "GuiltCreateData", function()
 	local query
 
@@ -50,7 +54,11 @@ hook.Add( "PlayerInitialSpawn","ZB_GuiltSQL", function( ply )
                 ply.Karma = ply:guilt_GetValue()
                 ply:SetNetVar("Karma", ply.Karma)
 
-                if zb.GuiltSQL.PlayerInstances[steamID64].value < 0 then
+                if zb.IsKarmaImmune(ply) then
+                    ply.Karma = zb.MaxKarma
+                    ply:SetNetVar("Karma", ply.Karma)
+                    ply:guilt_SetValue( zb.MaxKarma )
+                elseif zb.GuiltSQL.PlayerInstances[steamID64].value < 0 then
                     ply:guilt_SetValue( 10 )
                     local karma = ply.Karma
 
@@ -222,11 +230,18 @@ hook.Add("HomigradDamage", "GuiltReg", function(ply, dmgInfo, hitgroup, ent, har
     
     local guiltadd = amt * 60
     Attacker.Guilt = (Attacker.Guilt or 0) + guiltadd
-    Attacker.Karma = math.Clamp((Attacker.Karma or 100) - add * math.max(((1 - (zb.GuiltTable[Victim][Attacker] or 0)) / 1),0), -60, zb.MaxKarma)
+
+    local karmaImmune = zb.IsKarmaImmune(Attacker)
+
+    if karmaImmune then
+        Attacker.Karma = zb.MaxKarma
+    else
+        Attacker.Karma = math.Clamp((Attacker.Karma or 100) - add * math.max(((1 - (zb.GuiltTable[Victim][Attacker] or 0)) / 1),0), -60, zb.MaxKarma)
+    end
 
     zb.HarmDoneKarma[Victim][Attacker] = zb.HarmDoneKarma[Victim][Attacker] + add
 
-    if shouldBanGuilt and Attacker.Guilt >= 100 then
+    if shouldBanGuilt and Attacker.Guilt >= 100 and not karmaImmune then
 		-- if ULib then
         	ULib.addBan( Attacker:SteamID(), 30, "Kicked and banned for dealing too much team damage.", Attacker:Name(), "System" )
 		-- else
@@ -240,7 +255,7 @@ hook.Add("HomigradDamage", "GuiltReg", function(ply, dmgInfo, hitgroup, ent, har
     
     zb.GuiltTable[Attacker][Victim] = math.Clamp((zb.GuiltTable[Attacker][Victim] or 0) + guiltadd, 0, 200)
 
-    if Attacker.Karma <= 0 then
+    if Attacker.Karma <= 0 and not karmaImmune then
         local steamID = Attacker:SteamID()
         local name = Attacker:Name()
         local karma = Attacker.Karma
@@ -253,6 +268,8 @@ hook.Add("HomigradDamage", "GuiltReg", function(ply, dmgInfo, hitgroup, ent, har
             if IsValid(Attacker) then -- if the player haven't left in that exact tick then we do him dirty
                 karma = Attacker.Karma
             end
+
+            if IsValid(Attacker) and zb.IsKarmaImmune(Attacker) then return end
 
             local time = math.Round(60 - karma * 4, 0)
 
@@ -284,7 +301,7 @@ function zb.ForcesAttackedInnocent(self, Victim)
 end
 
 hook.Add("PlayerDisconnected","GuiltSaveOnDisconect",function(ply)
-    ply:guilt_SetValue( ply.Karma or 100 )
+    ply:guilt_SetValue( zb.IsKarmaImmune(ply) and zb.MaxKarma or (ply.Karma or 100) )
 end)
 
 hook.Add("Player Spawn","SlowlyRestoreKarma",function(ply)
@@ -293,6 +310,11 @@ hook.Add("Player Spawn","SlowlyRestoreKarma",function(ply)
     ply.lastwarning = nil
     //ply.firstwarning = nil
     ply.Karma = ply.Karma or 100
+
+    if zb.IsKarmaImmune(ply) then
+        ply.Karma = zb.MaxKarma
+    end
+
     ply:SetNetVar("Karma",ply.Karma)
     //ply:guilt_SetValue( ply.Karma or 100 )
     
@@ -303,7 +325,11 @@ hook.Add("Player Think", "karmagain", function(ply)
     if (ply.KarmaGainThink or 0) > CurTime() then return end
     ply.KarmaGainThink = CurTime() + 120
 
-    ply.Karma = math.Clamp(ply.Karma + (ply.Karma > 100 and 0.1 or (ply.KarmaGain or 0.75)), 0, zb.MaxKarma)// * (1 + ply:HasPurchase("zpremium")), 0, zb.MaxKarma)
+    if zb.IsKarmaImmune(ply) then
+        ply.Karma = zb.MaxKarma
+    else
+        ply.Karma = math.Clamp(ply.Karma + (ply.Karma > 100 and 0.1 or (ply.KarmaGain or 0.75)), 0, zb.MaxKarma)// * (1 + ply:HasPurchase("zpremium")), 0, zb.MaxKarma)
+    end
     
     ply:SetNetVar("Karma", ply.Karma)
     //ply:guilt_SetValue( ply.Karma or 100 )
@@ -317,6 +343,7 @@ hook.Add("Should Fake Up", "karma", function(ply)
     if ply.organism and ply.organism.start_shaking then return false end
 end)
 
+--[[
 local seizuremsgs = {
     "bllllhlhmmmbmmmmbmbmb",
     "bbb b-bbbbbb bllmbmmbb",
@@ -362,10 +389,76 @@ hook.Add("Org Think", "Its_Karma_Bro",function(owner, org, timeValue)
         end
     end
 end)
+--]]
+
+hook.Add("Org Think", "Its_Karma_Bro",function(owner, org, timeValue)
+    if not owner or not owner:IsPlayer() or org.otrub or not org.isPly then return end
+    if not owner:IsPlayer() or not owner:Alive() then return end
+
+    local ply = owner
+
+    if (ply.Karma or 100) < 35 then
+        if math.random(2000) == 1 then
+            hg.organism.Vomit(owner)
+        end
+    end
+end)
+
+local function KarmaSuicide_IsLocked(ply)
+    return IsValid(ply) and ply.suiciding
+end
+
+local function KarmaSuicide_GetWeapon(ply)
+    if not IsValid(ply) or not ply.GetActiveWeapon then return nil end
+    local wep = ply:GetActiveWeapon()
+    if IsValid(wep) and ishgweapon(wep) then return wep end
+    return nil
+end
+
+hook.Add("PlayerPostThink", "LowKarmaForceSuicideRoll", function(ply)
+    if not IsValid(ply) or not ply:Alive() then return end
+    if KarmaSuicide_IsLocked(ply) then return end
+    if (ply.Karma or 100) >= 20 then return end
+
+    local wep = KarmaSuicide_GetWeapon(ply)
+    if not wep then return end
+
+    ply.NextLowKarmaSuicideCheck = ply.NextLowKarmaSuicideCheck or (CurTime() + 15)
+    if ply.NextLowKarmaSuicideCheck > CurTime() then return end
+
+    ply.NextLowKarmaSuicideCheck = CurTime() + 15
+
+    if math.random(100) > 8 then return end
+
+    ply:Notify( "M-my... Hands are moving on their own!..." )
+
+    ply.suiciding = true
+    ply.LowKarmaSuicideLock = true
+    ply:SetNWFloat( "willsuicide", CurTime() + 11 )
+
+    timer.Simple( 7, function()
+        if not IsValid(ply) then return end
+        if ply:Alive() and ply.suiciding then
+            ply:Notify( "Pale man... Pale man.... Pale man..." )
+        end
+    end )
+
+    timer.Simple( 11, function()
+        if not IsValid(ply) then return end
+
+        if ply:Alive() and ply.suiciding then
+            ply.LowKarmaSuicideLock = false
+            local activeWep = ply:GetActiveWeapon()
+            if IsValid(activeWep) then
+                activeWep:PrimaryAttack(true)
+            end
+        end
+    end)
+end)
 
 hook.Add("ZB_EndRound","savevalues",function()
     for i,ply in player.Iterator() do
-        ply:guilt_SetValue( ply.Karma or 100 )
+        ply:guilt_SetValue( zb.IsKarmaImmune(ply) and zb.MaxKarma or (ply.Karma or 100) )
     end
 end)
 
