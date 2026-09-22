@@ -130,11 +130,11 @@ function hg.DrawLeaderboardMenu(ParentPanel)
 
 	local playersScroll = vgui.Create("DScrollPanel", ParentPanel)
 	playersScroll:SetPos(10, ScreenScaleH(54))
-	playersScroll:SetSize(colW, ParentPanel:GetTall() - ScreenScaleH(64))
+	playersScroll:SetSize(colW, ParentPanel:GetTall() - ScreenScaleH(64) - ScreenScaleH(26))
 
 	local spectatorsScroll = vgui.Create("DScrollPanel", ParentPanel)
 	spectatorsScroll:SetPos(20 + colW, ScreenScaleH(54))
-	spectatorsScroll:SetSize(colW, ParentPanel:GetTall() - ScreenScaleH(64))
+	spectatorsScroll:SetSize(colW, ParentPanel:GetTall() - ScreenScaleH(64) - ScreenScaleH(26))
 
 	local players, spectators = {}, {}
 
@@ -154,5 +154,37 @@ function hg.DrawLeaderboardMenu(ParentPanel)
 
 	for _, ply in ipairs(spectators) do
 		CreateRow(spectatorsScroll, ply, colW)
+	end
+
+	surface.SetFont("ZB_InterfaceSmall")
+	local muteLabel = "MUTE SPECTATORS"
+	local labelW = surface.GetTextSize(muteLabel)
+	local btnW, btnH = labelW + ScreenScale(16), ScreenScaleH(18)
+
+	local muteSpectBtn = vgui.Create("DButton", ParentPanel)
+	muteSpectBtn:SetText("")
+	muteSpectBtn:SetSize(btnW, btnH)
+	muteSpectBtn:SetPos(ParentPanel:GetWide() - btnW - 10, ParentPanel:GetTall() - btnH - 10)
+
+	muteSpectBtn.Paint = function(self, w, h)
+		surface.SetDrawColor(hg.mutespect and colText or colHeaderBg)
+		surface.DrawRect(0, 0, w, h)
+		surface.SetDrawColor(colBorder)
+		surface.DrawOutlinedRect(0, 0, w, h, 1)
+		draw.SimpleText(muteLabel, "ZB_InterfaceSmall", w / 2, h / 2, hg.mutespect and colBg or colText, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+	end
+
+	muteSpectBtn.DoClick = function()
+		hg.mutespect = not hg.mutespect
+
+		for _, ply in player.Iterator() do
+			if ply:Alive() then continue end
+
+			if hg.mutespect then
+				ply:SetVoiceVolumeScale(0)
+			else
+				ply:SetVoiceVolumeScale(not hg.muteall and (hg.playerInfo[ply:SteamID()] and hg.playerInfo[ply:SteamID()][2] or 1) or 0)
+			end
+		end
 	end
 end

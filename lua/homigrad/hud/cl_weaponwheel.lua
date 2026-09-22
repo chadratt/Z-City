@@ -427,14 +427,35 @@ function WW.Hide()
 	ClosePanel()
 end
 
+WW.Key = WW.Key or KEY_TAB
+
 hook.Add("PlayerBindPress", "WeaponWheel_TabIntercept", function(ply, bind, pressed)
 	if bind ~= "+showscores" then return end
 
-	if pressed then
-		WW.Show()
-	else
-		WW.Hide()
+	if WW.Key == KEY_TAB then
+		if pressed then
+			WW.Show()
+		else
+			WW.Hide()
+		end
 	end
 
 	return true
+end)
+
+hook.Add("PlayerButtonDown", "WeaponWheel_KeyDown", function(ply, button)
+	if WW.Key == KEY_TAB then return end
+	if ply ~= LocalPlayer() then return end
+	if button ~= WW.Key then return end
+	if gui.IsGameUIVisible() then return end
+
+	WW.Show()
+end)
+
+hook.Add("PlayerButtonUp", "WeaponWheel_KeyUp", function(ply, button)
+	if WW.Key == KEY_TAB then return end
+	if ply ~= LocalPlayer() then return end
+	if button ~= WW.Key then return end
+
+	WW.Hide()
 end)

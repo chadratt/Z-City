@@ -15,13 +15,28 @@ local mappull = {}
 local playerVoteWeight = {}
 
 local mapWhitelist = {
-    ["gm_construct"]                  = true,
+    ["gm_gleb"]                  = true,
     ["ttt_houndpitspub_a1"]           = true,
-    ["gm_asylum"]                     = true,
-    ["gm_montauk"]                    = true,
     ["mu_alone_v2"]                   = true,
-    ["hmcd_rooftops_snow"]            = true,
-    ["hmcd_metropolis_extended_ring"] = true,
+      ["gm_bbicotka_hmcd"]                   = true,
+      ["gm_zabroshka"]                   = true,
+      ["gm_sentimental98v3night"]                   = true,
+      ["gm_denizen"]                   = true,
+      ["ttt_clue_2022"]                   = true,
+      ["ttt_diescraper"]                   = true,
+      ["ttt_fernwood"]                   = true,
+      ["ttt_67thway_2022"]                   = true,
+      ["ttt_fastfood_a6"]                   = true,
+      ["hmcd_metropolis"]                   = true,
+      ["hmcd_metropolis_extended"]                   = true,
+      ["mu_smalltown_v2_13"]                   = true,
+      ["mu_aughts"]                   = true,
+      ["hmcd_lighthouse"]                   = true,
+      ["mu_powerhermit"]                   = true,
+      ["mu_rascal"]                   = true,
+      ["hmcd_aircraft"]                   = true,
+      ["zs_richland_remix_v1a"]                   = true,
+      ["zs_cursedwoods_v3"]                   = true,
 }
 
 local function GetMapFamily(map)
