@@ -8,6 +8,7 @@ end
 local hg_firstperson_death = CreateClientConVar("hg_firstperson_death", "0", true, false, "Toggle first-person death camera view", 0, 1)
 local hg_font = CreateClientConVar("hg_font", "Bahnschrift", true, false, "change every text font to selected because ui customization is cool")
 local hg_attachment_draw_distance = CreateClientConVar("hg_attachment_draw_distance", 0, true, nil, "distance to draw attachments", 0, 4096)
+local hg_radial_weapon_selector = CreateClientConVar("hg_radial_weapon_selector", "1", true, false, "Use the radial weapon wheel instead of the classic number-key weapon selector", 0, 1)
 
 xbars = 17
 ybars = 30
@@ -46,6 +47,8 @@ surface.CreateFont("ZCity_setiings_category", {
 	weight = 100
 })
 
+
+hg.settings:AddOpt("ANARCHY","hg_radial_weapon_selector", "Radial Weapon selector On/Off")
 
 hg.settings:AddOpt("Gameplay","hg_old_notificate", "Old Notifications")
 hg.settings:AddOpt("Gameplay","hg_cheats", "Enable Cheats")
@@ -354,7 +357,18 @@ function hg.DrawSettings(ParentPanel)
 
     local yOffset = pppanel3:GetTall()/100
 
-    for categoryName, categoryTable in pairs(hg.settings.tbl) do
+    local categoryOrder = {}
+    if hg.settings.tbl["ANARCHY"] then
+        categoryOrder[#categoryOrder + 1] = "ANARCHY"
+    end
+    for categoryName in pairs(hg.settings.tbl) do
+        if categoryName ~= "ANARCHY" then
+            categoryOrder[#categoryOrder + 1] = categoryName
+        end
+    end
+
+    for _, categoryName in ipairs(categoryOrder) do
+        local categoryTable = hg.settings.tbl[categoryName]
         local category = hg.CreateCategory(categoryName, pppanel3, yOffset)
         yOffset = yOffset + category:GetTall() + 12
         for convarName, settingData in pairs(categoryTable) do

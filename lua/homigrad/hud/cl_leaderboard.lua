@@ -112,7 +112,13 @@ function hg.DrawLeaderboardMenu(ParentPanel)
 		draw.SimpleText(plyCount .. " Players  /  " .. specCount .. " Spectators", "ZB_InterfaceSmall", w - 15, ScreenScaleH(15), colMuted, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 	end
 
-	local colW = (ParentPanel:GetWide() - 30) / 2
+	surface.SetFont("ZB_InterfaceSmall")
+	local switchLabel = "SWITCH TEAM"
+	local switchLabelW = surface.GetTextSize(switchLabel)
+	local switchBtnW, switchBtnH = switchLabelW + ScreenScale(16), ScreenScaleH(16)
+	local gutter = switchBtnW + ScreenScale(20)
+
+	local colW = (ParentPanel:GetWide() - 20 - gutter) / 2
 
 	local playersHeader = vgui.Create("DLabel", ParentPanel)
 	playersHeader:SetPos(10, ScreenScaleH(38))
@@ -122,7 +128,7 @@ function hg.DrawLeaderboardMenu(ParentPanel)
 	playersHeader:SetText("PLAYERS")
 
 	local spectatorsHeader = vgui.Create("DLabel", ParentPanel)
-	spectatorsHeader:SetPos(20 + colW, ScreenScaleH(38))
+	spectatorsHeader:SetPos(10 + colW + gutter, ScreenScaleH(38))
 	spectatorsHeader:SetSize(colW, ScreenScaleH(14))
 	spectatorsHeader:SetFont("ZB_InterfaceSmall")
 	spectatorsHeader:SetTextColor(colMuted)
@@ -133,7 +139,7 @@ function hg.DrawLeaderboardMenu(ParentPanel)
 	playersScroll:SetSize(colW, ParentPanel:GetTall() - ScreenScaleH(64) - ScreenScaleH(26))
 
 	local spectatorsScroll = vgui.Create("DScrollPanel", ParentPanel)
-	spectatorsScroll:SetPos(20 + colW, ScreenScaleH(54))
+	spectatorsScroll:SetPos(10 + colW + gutter, ScreenScaleH(54))
 	spectatorsScroll:SetSize(colW, ParentPanel:GetTall() - ScreenScaleH(64) - ScreenScaleH(26))
 
 	local players, spectators = {}, {}
@@ -154,6 +160,28 @@ function hg.DrawLeaderboardMenu(ParentPanel)
 
 	for _, ply in ipairs(spectators) do
 		CreateRow(spectatorsScroll, ply, colW)
+	end
+
+	local switchTeamBtn = vgui.Create("DButton", ParentPanel)
+	switchTeamBtn:SetText("")
+	switchTeamBtn:SetSize(switchBtnW, switchBtnH)
+	switchTeamBtn:SetPos(10 + colW + gutter / 2 - switchBtnW / 2, ScreenScaleH(37))
+
+	switchTeamBtn.Paint = function(self, w, h)
+		surface.SetDrawColor(colHeaderBg)
+		surface.DrawRect(0, 0, w, h)
+		surface.SetDrawColor(colBorder)
+		surface.DrawOutlinedRect(0, 0, w, h, 1)
+		draw.SimpleText(switchLabel, "ZB_InterfaceSmall", w / 2, h / 2, colText, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+	end
+
+	switchTeamBtn.DoClick = function()
+		local ply = LocalPlayer()
+		if not IsValid(ply) then return end
+
+		net.Start("ZB_SpecMode")
+		net.WriteBool(ply:Team() ~= TEAM_SPECTATOR)
+		net.SendToServer()
 	end
 
 	surface.SetFont("ZB_InterfaceSmall")

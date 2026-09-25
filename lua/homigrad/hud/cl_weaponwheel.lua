@@ -188,6 +188,9 @@ local function DropHovered()
 end
 
 function WW.Show()
+	local cv = GetConVar("hg_radial_weapon_selector")
+	if cv and not cv:GetBool() then return end
+
 	local ply = LocalPlayer()
 
 	if not IsValid(ply) or not ply:Alive() then return end
