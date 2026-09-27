@@ -13,7 +13,7 @@ function PANEL:Init()
 	self.dialogue = self:Add("ZB_HitmanDialogue")
 	self.dialogue:SetPos(ScrW() / 2 - self.dialogue:GetWide() / 2, ScrH() / 2 - self.dialogue:GetTall() / 2)
 
-	self.dialogue:SetText("You may be wondering why you all are here. Each of you have been paired with another guest, Hunter and Hunted. Track down your Quarry but beware, another is coming for you. Two of you will be making it out alive. . . .", 2)
+	self.dialogue:SetText("You may be wondering why you all are here. Each of you have been paired with another guest, Hunter and Hunted. Track down your Quarry but beware, another is coming for you. Only one of you will be making it out alive. . . .", 2)
 	timer.Simple(18, function()
 		if !IsValid(self) then return end
 		self.dialogue:SetText("Kill or be killed! what better sport could you wish for!")

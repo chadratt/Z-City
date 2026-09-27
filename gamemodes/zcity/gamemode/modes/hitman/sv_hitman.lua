@@ -3,200 +3,282 @@ local MODE = MODE
 MODE.name = "hitman"
 MODE.PrintName = "Hitman"
 MODE.LootSpawn = true
-MODE.GuiltDisabled = true
+MODE.GuiltDisabled = false
 MODE.randomSpawns = true
 
-MODE.ForBigMaps = true
-MODE.Chance = 0
+MODE.ForBigMaps = false
+MODE.Chance = 0.03
+MODE.ROUND_TIME = 600
+MODE.MinPlayers = 10
 
 MODE.EndLogicType = 2
 
 util.AddNetworkString("hitman_start")
 util.AddNetworkString("hitman_end")
 util.AddNetworkString("hitman_briefing")
-util.AddNetworkString("hitman_set_target")   
-
-
-
-
-
+util.AddNetworkString("hitman_set_target")
+util.AddNetworkString("hitman_dialogue")
 
 MODE.LootTable = {
-	{35, {
-		{15,"weapon_smallconsumable"},
-		{12,"weapon_bigconsumable"},
-		{8,"weapon_tourniquet"},
-		{8,"weapon_bandage_sh"},
-		{7,"weapon_ducttape"},
-		{6,"weapon_painkillers"},
-		{5,"weapon_bloodbag"},
-		{4,"weapon_walkie_talkie"},
-		{3,"hg_flashlight"},
-		{3,"weapon_bigbandage_sh"},
-		{2,"weapon_medkit_sh"},
+	{30, {
+		{15, "weapon_smallconsumable"},
+		{12, "weapon_bigconsumable"},
+		{8, "weapon_tourniquet"},
+		{8, "weapon_bandage_sh"},
+		{7, "weapon_ducttape"},
+		{6, "weapon_painkillers"},
+		{5, "weapon_bloodbag"},
+		{4, "weapon_walkie_talkie"},
+		{3, "hg_flashlight"},
+		{3, "weapon_bigbandage_sh"},
+		{2, "weapon_medkit_sh"},
 
-		{1,"weapon_matches"},
+		{1, "weapon_matches"},
 
-		{0.2,"weapon_morphine"},
-		{0.2,"weapon_mannitol"},
-		{0.5,"weapon_naloxone"},
-		{0.1,"weapon_fentanyl"},
-		{0.9,"weapon_betablock"},
-		{0.5,"weapon_adrenaline"},
+		{0.2, "weapon_morphine"},
+		{0.2, "weapon_mannitol"},
+		{0.5, "weapon_naloxone"},
+		{0.1, "weapon_fentanyl"},
+		{0.9, "weapon_betablock"},
+		{0.5, "weapon_adrenaline"},
 
-		{0.65,"ent_armor_mask2"},
+		{0.65, "ent_armor_mask2"},
 		{0.27, "ent_armor_helmet2"},
 	}},
-	{27,{
-		{12,"weapon_hammer"},
-		{6,"weapon_brick"},
-		{10,"weapon_pocketknife"},
+	{35, {
+		{24, "weapon_hammer"},
+		{12, "weapon_brick"},
+		{20, "weapon_pocketknife"},
+		{12, "weapon_kitchenknife"},
 
-		{4,"weapon_bat"},
-		{4,"weapon_leadpipe"},
-		{3,"weapon_hg_extinguisher"},
+		{8, "weapon_bat"},
+		{5, "weapon_batmetal"},
+		{8, "weapon_leadpipe"},
+		{6, "weapon_hg_extinguisher"},
+		{4, "weapon_hg_wrench"},
 
-		{2,"weapon_hg_crowbar"},
-		{1,"weapon_hatchet"},
-		{0.9,"weapon_hg_axe"},
-		{0.5,"weapon_hg_machete"},
-		{0.4,"weapon_hg_sledgehammer"},
+		{4, "weapon_hg_crowbar"},
+		{3, "weapon_hg_skateboard"},
+		{2.4, "weapon_hg_cinderblock"},
+		{2, "weapon_hatchet"},
+		{1.8, "weapon_hg_axe"},
+		{1.6, "weapon_hg_pitchfork"},
+		{1.2, "weapon_eft_melee_taiga"},
+		{1.2, "weapon_eft_melee_sp8"},
+		{1, "weapon_eft_melee_a2607d"},
+		{1, "weapon_eft_melee_a2607"},
+		{1, "weapon_eft_melee_wycc"},
+		{1, "weapon_eft_melee_6x5"},
+		{1, "weapon_hg_machete"},
+		{0.9, "weapon_eft_melee_taran"},
+		{0.8, "weapon_hg_sledgehammer"},
+		{0.7, "weapon_drill"},
 
-		{0.2,"hg_brassknuckles"},
-		{0.13,"weapon_hg_spear"},
-		{0.13, "weapon_hg_spear_pro"},
+		{0.4, "hg_brassknuckles"},
+		{0.36, "weapon_hg_fubar"},
+		{0.26, "weapon_hg_spear"},
+		{0.26, "weapon_hg_spear_pro"},
+		{0.24, "weapon_hg_chainsaw"},
+		{0.06, "weapon_hg_fiberwire"},
 	}},
-	{11,{
-		{10,"*sight*"},
-		{7,"*barrel*"},
+	{11, {
+		{10, "*sight*"},
+		{7, "*barrel*"},
 
-		{7,"ent_armor_helmet7"},
-		{5,"ent_armor_vest7"},
+		{7, "ent_armor_helmet7"},
+		{5, "ent_armor_vest7"},
 		{8, "ent_armor_helmet2"},
 	}},
-	{17,{
-		{6,"*sight*"},
-		{5,"*barrel*"},
+	{22, {
+		{12, "*sight*"},
+		{10, "*barrel*"},
 
-		{15,"weapon_mp-80"},
-		{8,"weapon_makarov"},
-		{7,"weapon_ruger"},
-		{4,"weapon_revolver2"},
-		{4,"weapon_px4beretta"},
-		{3.5,"weapon_m1911"},
-		{3,"weapon_m9beretta"},
-		{2,"weapon_fn45"},
+		{30, "weapon_mp-80"},
+		{16, "weapon_makarov"},
+		{14, "weapon_ruger"},
+		{8, "weapon_revolver2"},
+		{8, "weapon_px4beretta"},
+		{7, "weapon_m1911"},
+		{6, "weapon_m9beretta"},
+		{4, "weapon_fn45"},
 	}},
-	{6, {
-		{9,"weapon_hk_usp"},
-		{9,"weapon_glock17"},
-		{9,"weapon_cz75"},
-		{9,"weapon_px4beretta"},
+	{15, {
+		{18, "weapon_hk_usp"},
+		{18, "weapon_glock17"},
+		{18, "weapon_cz75"},
+		{18, "weapon_px4beretta"},
 
-		{6,"weapon_deagle"},
-		{6,"weapon_colt9mm"},
+		{12, "weapon_deagle"},
+		{12, "weapon_colt9mm"},
 
-		{5,"weapon_doublebarrel_short"},
-		{5,"weapon_doublebarrel"},
-		{4, "weapon_flintlock"},
+		{10, "weapon_doublebarrel_short"},
+		{10, "weapon_doublebarrel"},
+		{8, "weapon_flintlock"},
 	}},
-	{8,{
-		{5,"ent_armor_vest3"},
-		{5,"ent_armor_helmet1"},
-		{2,"ent_armor_vest4"},
+	{4, {
+		{5, "ent_armor_vest3"},
+		{5, "ent_armor_helmet1"},
+		{2, "ent_armor_vest4"},
 		{2, "ent_armor_helmet5"},
 	}},
-	{2, {
-		{4,"weapon_remington870"},
+	{6, {
+		{8, "weapon_remington870"},
 
-		{4,"weapon_hg_molotov_tpik"},
+		{8, "weapon_hg_molotov_tpik"},
+		{8, "weapon_hg_pipebomb_tpik"},
 
-		{3,"weapon_mini14"},
-		{3,"weapon_kar98"},
-		{3,"weapon_ar_pistol"},
-		{3,"weapon_draco"},
-		{3,"weapon_mp5"},
-		{3,"weapon_m16a2"},
+		{6, "weapon_mini14"},
+		{6, "weapon_kar98"},
+		{6, "weapon_ar_pistol"},
+		{6, "weapon_draco"},
+		{6, "weapon_mp5"},
+		{6, "weapon_m16a2"},
 
-		{1,"weapon_vpo136"},
-		{1,"weapon_musket"},
-		{1,"weapon_vpo136"},
-		{1,"weapon_sr25"},
+		{4, "weapon_mp7"},
+		{4, "weapon_sks"},
+		{4, "weapon_ar15"},
+		{4, "weapon_ac556"},
+
+		{2, "weapon_vpo136"},
+		{2, "weapon_musket"},
+		{2, "weapon_vpo136"},
+		{2, "weapon_sr25"},
 	}},
 }
 
-
-
-
 local HitmanTargets = {}
-local HITMAN_WRONG_KILL_KARMA = 15      
-local ATTACKER_MEMORY         = 12      
+local HitmanRing    = {}
+local HitmanDuel    = false
 
+local function IsHitmanActive()
+	return (zb.CROUND_MAIN or zb.CROUND) == "hitman"
+end
 
+function MODE:SetupChances()
+	local saved = zb.ModesChances[self.name]
+	if saved == nil or saved == 0 then
+		zb.ModesChances[self.name] = self.Chance
+	end
+end
 
+local WRONG_KILL_LINES = {
+	"What the hell are you doing?",
+	"Wrong Target.",
+	"Stop shooting the wrong target!",
+	"Fucking idiot. Stop shooting the wrong target!",
+}
 
-hook.Add("EntityTakeDamage", "hitman_track_attacker", function(ent, dmgInfo)
-	if (zb.CROUND_MAIN or zb.CROUND) ~= "hitman" then return end
-	if zb.ROUND_STATE ~= 1 then return end
-	if not (IsValid(ent) and ent:IsPlayer()) then return end
+local IDLE_LINES = {
+	"What are you doing? get to murdering!",
+	"What are you fucking around? get to killing!",
+	"Im not gonna sit here and watch some asshole do nothing. Kill your target or else im gonna kill you myself!",
+	"Get to killing you idiot.",
+	"I didnt let all these good people pay to see someone fuck around. Kill. Your. Target.",
+}
 
-	local att = dmgInfo:GetAttacker()
-	if not (IsValid(att) and att:IsPlayer()) then
-		local inf = dmgInfo:GetInflictor()
-		if IsValid(inf) and inf.GetOwner then
+local IDLE_TIME       = 60
+local ATTACKER_MEMORY = 60
+
+local function SendDialogue(ply, lines)
+	if not IsValid(ply) then return end
+	net.Start("hitman_dialogue")
+		net.WriteString(lines[math.random(#lines)])
+	net.Send(ply)
+end
+
+local function ResolvePlayer(ent)
+	if not IsValid(ent) then return nil end
+	if ent:IsPlayer() then return ent end
+	if hg and hg.RagdollOwner then
+		local owner = hg.RagdollOwner(ent)
+		if IsValid(owner) and owner:IsPlayer() then return owner end
+	end
+	return nil
+end
+
+local function ResolveAttacker(dmgInfo)
+	local att = ResolvePlayer(dmgInfo:GetAttacker())
+	if IsValid(att) then return att end
+
+	local inf = dmgInfo:GetInflictor()
+	if IsValid(inf) then
+		if inf:IsPlayer() then return inf end
+		if inf.GetOwner then
 			local owner = inf:GetOwner()
-			if IsValid(owner) and owner:IsPlayer() then att = owner end
+			if IsValid(owner) and owner:IsPlayer() then return owner end
 		end
 	end
 
-	if IsValid(att) and att:IsPlayer() and att ~= ent then
-		ent.hitman_lastAttacker     = att
-		ent.hitman_lastAttackerTime = CurTime()
+	return nil
+end
+
+local function RecordAttacker(victimEnt, dmgInfo)
+	if not IsHitmanActive() or zb.ROUND_STATE ~= 1 then return end
+
+	local victim = ResolvePlayer(victimEnt)
+	if not IsValid(victim) then return end
+
+	local att = ResolveAttacker(dmgInfo)
+	if IsValid(att) and att ~= victim then
+		victim.hitman_lastAttacker     = att
+		victim.hitman_lastAttackerTime = CurTime()
 	end
+end
+
+hook.Add("EntityTakeDamage", "hitman_track_attacker", function(ent, dmgInfo)
+	RecordAttacker(ent, dmgInfo)
 end)
 
-
+hook.Add("HomigradDamage", "hitman_track_attacker", function(ply, dmgInfo)
+	RecordAttacker(ply, dmgInfo)
+end)
 
 local function ResolveKiller(victim, attacker)
 	if IsValid(attacker) and attacker:IsPlayer() and attacker ~= victim then
 		return attacker
 	end
 
-	local la = victim.hitman_lastAttacker
-	local lt = victim.hitman_lastAttackerTime or 0
-	if IsValid(la) and la:IsPlayer() and la ~= victim and (CurTime() - lt) <= ATTACKER_MEMORY then
-		return la
+	local last = victim.hitman_lastAttacker
+	if IsValid(last) and last ~= victim and (CurTime() - (victim.hitman_lastAttackerTime or 0)) <= ATTACKER_MEMORY then
+		return last
 	end
 
 	return nil
 end
 
+function MODE.GuiltCheck(Attacker, Victim, add, harm, amt)
+	if HitmanTargets[Attacker] == Victim then return 0 end
+	if HitmanTargets[Victim] == Attacker then return 0 end
+	return 1
+end
 
-local function ApplyWrongKillPenalty(ply)
-	if not (IsValid(ply) and ply:IsPlayer()) then return end
-
-	local before = ply.Karma or 100
-	ply.Karma = math.Clamp(before - HITMAN_WRONG_KILL_KARMA, -60, zb.MaxKarma or 120)
-	ply:SetNetVar("Karma", ply.Karma)
-
-	ply:ChatPrint(string.format(
-		"You killed the wrong target! Karma %d (-%d)",
-		math.Round(ply.Karma), math.Round(before - ply.Karma)))
+local function CountPlaying()
+	local n = 0
+	for _, ply in player.Iterator() do
+		if ply:Team() ~= TEAM_SPECTATOR then n = n + 1 end
+	end
+	return n
 end
 
 function MODE:CanLaunch()
-	return true
+	return CountPlaying() >= (self.MinPlayers or 3)
 end
 
 function MODE:Intermission()
 	game.CleanUpMap()
 
+	HitmanTargets = {}
+	HitmanRing    = {}
+	HitmanDuel    = false
+
 	for k, ply in player.Iterator() do
+		ply.won = nil
+
 		if ply:Team() == TEAM_SPECTATOR then
 			continue
 		end
 
-		ApplyAppearance(ply)
+		ApplyAppearance(ply, nil, nil, nil, true)
 		ply:SetupTeam(0)
 	end
 
@@ -205,105 +287,102 @@ function MODE:Intermission()
 end
 
 function MODE:ShouldRoundEnd()
-	return (#zb:CheckAlive(true) <= 2)
+	return #zb:CheckAlive() <= 1
 end
-
-
-
-
-
-
-local function BuildTargetAssignments(players)
-	local n = #players
-	if n < 2 then return {} end
-
-	
-	local order = {}
-	for i, v in ipairs(players) do order[i] = v end
-	for i = n, 2, -1 do
-		local j = math.random(1, i)
-		order[i], order[j] = order[j], order[i]
-	end
-
-	local assignments = {}
-	for i = 1, n do
-		assignments[order[i]] = order[(i % n) + 1]
-	end
-	return assignments
-end
-
 
 local function SendTargetToPlayer(ply)
+	if not IsValid(ply) then return end
 	local target = HitmanTargets[ply]
 	net.Start("hitman_set_target")
-		if IsValid(target) then
-			net.WriteEntity(target)
-		else
-			net.WriteEntity(NULL)
-		end
+		net.WriteEntity(IsValid(target) and target or NULL)
+		net.WriteBool(HitmanDuel and IsValid(target))
 	net.Send(ply)
 end
 
-
-local function FindHunterOf(ply)
-	for hunter, target in pairs(HitmanTargets) do
-		if IsValid(hunter) and target == ply then
-			return hunter
+local function RecalcTargets(exclude)
+	local living = {}
+	for _, p in ipairs(HitmanRing) do
+		if IsValid(p) and p ~= exclude and p:Alive() then
+			living[#living + 1] = p
 		end
 	end
-	return nil
-end
 
-
-
-
-local function NextLivingInChain(start, avoid)
-	local node  = start
-	local guard = 0
-	while guard < 128 do
-		if not IsValid(node) then return nil end
-		if node ~= avoid and node:Alive() then return node end
-		node  = HitmanTargets[node]
-		guard = guard + 1
+	local newTargets = {}
+	local n = #living
+	if n >= 2 then
+		for i = 1, n do
+			newTargets[living[i]] = living[(i % n) + 1]
+		end
 	end
-	return nil
+
+	local old = HitmanTargets
+	HitmanTargets = newTargets
+
+	local duel     = (n == 2)
+	local duelFlip = (duel ~= HitmanDuel)
+	HitmanDuel = duel
+
+	for hunter, tgt in pairs(newTargets) do
+		if duelFlip or old[hunter] ~= tgt then SendTargetToPlayer(hunter) end
+	end
+
+	for hunter in pairs(old) do
+		if IsValid(hunter) and newTargets[hunter] == nil then
+			SendTargetToPlayer(hunter)
+		end
+	end
 end
 
 function MODE:RoundStart()
 	HitmanTargets = {}
+	HitmanRing    = {}
+	HitmanDuel    = false
 
-	local alive = zb:CheckAlive(true)
-	local assignments = BuildTargetAssignments(alive)
-
-	for hunter, target in pairs(assignments) do
-		HitmanTargets[hunter] = target
+	local players = {}
+	for _, ply in player.Iterator() do
+		ply.won = nil
+		ply.hitman_firstTarget     = nil
+		ply.hitman_idleAt          = nil
+		ply.hitman_lastAttacker     = nil
+		ply.hitman_lastAttackerTime = nil
+		if ply:Team() == TEAM_SPECTATOR or not ply:Alive() then continue end
+		players[#players + 1] = ply
 	end
 
-	for _, ply in player.Iterator() do
-		if not ply:Alive() then continue end
+	for i = #players, 2, -1 do
+		local j = math.random(1, i)
+		players[i], players[j] = players[j], players[i]
+	end
 
+	HitmanRing = players
+
+	for _, ply in ipairs(players) do
 		ply:SetSuppressPickupNotices(true)
 		ply.noSound = true
-		local hands = ply:Give("weapon_hands_sh")
+		ply:Give("weapon_hands_sh")
 		ply:SelectWeapon("weapon_hands_sh")
 
 		timer.Simple(0.1, function()
-			ply.noSound = false
+			if IsValid(ply) then ply.noSound = false end
 		end)
 
 		ply:SetSuppressPickupNotices(false)
 
-		zb.GiveRole(ply, GetGlobalString("ZB_EventRole", "Hitman"), Color(190, 15, 15))
+		zb.GiveRole(ply, GetGlobalString("ZB_EventRole", "Hitman"), Color(165, 35, 35))
 
 		net.Start("hitman_briefing")
 		net.Send(ply)
 	end
 
-	
 	timer.Simple(0.5, function()
-		for _, ply in player.Iterator() do
-			if not ply:Alive() then continue end
-			SendTargetToPlayer(ply)
+		if not IsHitmanActive() or zb.ROUND_STATE ~= 1 then return end
+		HitmanTargets = {}
+		HitmanDuel    = false
+		RecalcTargets()
+
+		for hunter, tgt in pairs(HitmanTargets) do
+			hunter.hitman_firstTarget = tgt
+			hunter.hitman_idleAt      = CurTime() + IDLE_TIME
 		end
 	end)
 end
@@ -315,87 +394,93 @@ function MODE:GiveEquipment()
 end
 
 function MODE:RoundThink()
+	local now = CurTime()
+
+	for _, ply in player.Iterator() do
+		if not ply.hitman_idleAt or now < ply.hitman_idleAt then continue end
+
+		ply.hitman_idleAt = nil
+
+		local first = ply.hitman_firstTarget
+		if ply:Alive() and IsValid(first) and first:Alive() then
+			SendDialogue(ply, IDLE_LINES)
+		end
+	end
 end
-
-
-
-
 
 function MODE:PlayerDeath(victim, inflictor, attacker)
 	if zb.ROUND_STATE ~= 1 then return end
+	if not IsValid(victim) then return end
 
-	
-	
-	
-	local killer            = ResolveKiller(victim, attacker)
-	local killerTargetBefore = IsValid(killer) and HitmanTargets[killer] or nil
+	local killer = ResolveKiller(victim, attacker)
 
-	
-	local hunter        = FindHunterOf(victim)
-	local victimsTarget = HitmanTargets[victim]
-
-	
-	HitmanTargets[victim] = nil
-
-	if IsValid(hunter) and hunter ~= victim then
-		
-		
-		local newTarget = NextLivingInChain(victimsTarget, hunter)
-
-		HitmanTargets[hunter] = (IsValid(newTarget) and newTarget) or nil
-
-		if hunter:Alive() then
-			SendTargetToPlayer(hunter)
-		end
+	if IsValid(killer) and killer:Alive()
+		and HitmanTargets[killer] ~= victim
+		and HitmanTargets[victim] ~= killer then
+		SendDialogue(killer, WRONG_KILL_LINES)
 	end
 
-	
-	
-	if IsValid(killer) and killer:IsPlayer() and killer ~= victim
-		and killerTargetBefore ~= victim then
-		ApplyWrongKillPenalty(killer)
-	end
+	RecalcTargets(victim)
 
 	victim.hitman_lastAttacker     = nil
 	victim.hitman_lastAttackerTime = nil
 end
+
+hook.Add("PlayerDisconnected", "hitman_disconnect", function(ply)
+	if not IsHitmanActive() or zb.ROUND_STATE ~= 1 then return end
+	RecalcTargets(ply)
+end)
+
+hook.Add("SetupPlayerVisibility", "hitman_target_pvs", function(ply)
+	if not IsHitmanActive() or zb.ROUND_STATE ~= 1 then return end
+	local target = HitmanTargets[ply]
+	if not (IsValid(target) and target:Alive()) then return end
+
+	local char = hg and hg.GetCurrentCharacter and hg.GetCurrentCharacter(target) or target
+	if not IsValid(char) then char = target end
+	AddOriginToPVS(char:GetPos())
+end)
 
 function MODE:CanSpawn()
 end
 
 function MODE:EndRound()
 	HitmanTargets = {}
+	HitmanRing    = {}
+	HitmanDuel    = false
 
 	timer.Simple(2, function()
 		net.Start("hitman_end")
-		local ent = zb:CheckAlive(true)[1]
+		local ent = zb:CheckAlive()[1]
 		net.WriteEntity(IsValid(ent) and ent:Alive() and ent or NULL)
 		net.Broadcast()
 	end)
 end
 
 concommand.Add("zb_hitman_name", function(ply, _, _, args)
-	if not ply:IsAdmin() then return end
+	if IsValid(ply) and not ply:IsAdmin() then return end
 	SetGlobalString("ZB_EventName", args)
 end)
 
 concommand.Add("zb_hitman_role", function(ply, _, _, args)
-	if not ply:IsAdmin() then return end
+	if IsValid(ply) and not ply:IsAdmin() then return end
 	SetGlobalString("ZB_EventRole", args)
 end)
 
 concommand.Add("zb_hitman_objective", function(ply, _, _, args)
-	if not ply:IsAdmin() then return end
+	if IsValid(ply) and not ply:IsAdmin() then return end
 	SetGlobalString("ZB_EventObjective", args)
 end)
 
 concommand.Add("zb_hitman_end", function(ply, _, _, _)
-	if not ply:IsAdmin() then return end
+	if IsValid(ply) and not ply:IsAdmin() then return end
 
-	if zb.ROUND_PLAYING then
-		MODE:EndRound()
-		ply:ChatPrint("Ending the hitman round...")
+	local function msg(t) if IsValid(ply) then ply:ChatPrint(t) else print(t) end end
+
+	if IsHitmanActive() and zb.ROUND_STATE == 1 then
+		zb:EndRound()
+		msg("Ending the hitman round...")
 	else
-		ply:ChatPrint("No hitman round is currently active.")
+		msg("No hitman round is currently active.")
 	end
 end)

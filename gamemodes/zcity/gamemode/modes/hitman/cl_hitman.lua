@@ -4,10 +4,33 @@ local MODE = MODE
 
 local roundend = false
 
-
 local hitman_currentTarget = nil
+local hitman_isDuel        = false
+local hitman_dialogueQueue = {}
 
+local DUEL_LINES = {
+	"There is only one other person left to kill...",
+	"You are doing a good job... but theres still one more..",
+	"Good that you are alive, now get that last person.",
+	"Theres still one more...",
+}
 
+local function QueueDialogue(text)
+	if not isstring(text) or text == "" then return end
+	if #hitman_dialogueQueue >= 3 then table.remove(hitman_dialogueQueue, 1) end
+	hitman_dialogueQueue[#hitman_dialogueQueue + 1] = text
+end
+
+local PAL = {
+	bg       = Color(12, 12, 12, 215),
+	bgLight  = Color(24, 24, 24, 230),
+	border   = Color(58, 58, 58, 255),
+	text     = Color(228, 228, 228, 255),
+	textDim  = Color(145, 145, 145, 230),
+	textMute = Color(95, 95, 95, 255),
+	red      = Color(165, 32, 32, 235),
+	redDark  = Color(95, 22, 22, 235),
+}
 
 local targetModelPanel = nil
 local lastModelTarget  = nil
@@ -20,13 +43,9 @@ local function RemoveTargetModel()
 	lastModelTarget  = nil
 end
 
-
-
-
-
-local lastScrH    = 0
-local hudFont     = nil   
-local hudFontSmall = nil  
+local lastScrH     = 0
+local hudFont      = nil
+local hudFontSmall = nil
 
 local function EnsureHudFonts()
 	local h = ScrH()
@@ -52,20 +71,18 @@ local function EnsureHudFonts()
 	hudFontSmall = "HM_TargetLabel_" .. h
 end
 
-
-
 local function GetCharacterName(ply)
 	if not IsValid(ply) then return "???" end
 	local charName = ply:GetNWString("PlayerName", "")
 	if charName ~= "" then return charName end
-	return ply:GetPlayerName()
+	return ply:Nick()
 end
 
-
-
 net.Receive("hitman_start", function()
-	roundend              = false
-	hitman_currentTarget  = nil
+	roundend             = false
+	hitman_currentTarget = nil
+	hitman_isDuel        = false
+	hitman_dialogueQueue = {}
 	RemoveTargetModel()
 	zb.RemoveFade()
 end)
@@ -74,20 +91,19 @@ net.Receive("hitman_briefing", function()
 	vgui.Create("ZB_HitmanBriefing")
 end)
 
-
-
 net.Receive("hitman_set_target", function()
 	local ent            = net.ReadEntity()
+	local duel           = net.ReadBool()
 	hitman_currentTarget = IsValid(ent) and ent or nil
+
+	if duel and not hitman_isDuel then
+		QueueDialogue(DUEL_LINES[math.random(#DUEL_LINES)])
+	end
+
+	hitman_isDuel = duel and hitman_currentTarget ~= nil
 end)
 
-
-
-
-
 local IDLE_SEQUENCES = { "idle_all_01", "idle_subtle", "idle", "cidle_all", "menu_walk", "walk_all" }
-
-
 
 local function AppearanceSource(target)
 	if hg and hg.GetCurrentCharacter then
@@ -99,7 +115,31 @@ local function AppearanceSource(target)
 	return target
 end
 
-local function ApplyTargetAppearance(card, target, targetChanged)
+local function AccessorySignature(acc)
+	if istable(acc) then return table.concat(acc, ",") end
+	return tostring(acc or "none")
+end
+
+local function ClearAccessoryModels(ent)
+	if not IsValid(ent) then return end
+	if istable(ent.modelAccess) then
+		for _, m in pairs(ent.modelAccess) do
+			if IsValid(m) then m:Remove() end
+		end
+	end
+	ent.modelAccess = nil
+end
+
+local function SetupPortraitCamera(mdlPanel, ent)
+	local _, maxs = ent:GetRenderBounds()
+	local topZ  = math.max(maxs.z, 64)
+	local lookZ = topZ * 0.62
+	mdlPanel:SetFOV(36)
+	mdlPanel:SetCamPos(Vector(topZ * 0.95, 0, lookZ))
+	mdlPanel:SetLookAt(Vector(0, 0, lookZ))
+end
+
+local function SyncTargetAppearance(card, target, targetChanged)
 	if not (IsValid(card) and IsValid(card.modelPanel) and IsValid(target)) then return end
 
 	local mdlPanel = card.modelPanel
@@ -107,57 +147,21 @@ local function ApplyTargetAppearance(card, target, targetChanged)
 	local mdl      = src:GetModel()
 	if not mdl or mdl == "" then return end
 
-	
-	if mdlPanel:GetModel() ~= mdl then
+	local modelChanged = false
+	if targetChanged or mdlPanel:GetModel() ~= mdl or not IsValid(mdlPanel.Entity) then
+		if IsValid(mdlPanel.Entity) then ClearAccessoryModels(mdlPanel.Entity) end
 		mdlPanel:SetModel(mdl)
+		modelChanged = true
 	end
 
 	local ent = mdlPanel.Entity
 	if not IsValid(ent) then return end
 
-	
-	
-	
 	mdlPanel.targetEnt = target
-	if targetChanged and istable(ent.modelAccess) then
-		for _, m in pairs(ent.modelAccess) do
-			if IsValid(m) then m:Remove() end
-		end
-		ent.modelAccess = nil
-	end
 
-	
-	pcall(function()
-		ent:SetSkin(src:GetSkin() or 0)
-
-		for i = 0, ent:GetNumBodyGroups() - 1 do
-			ent:SetBodygroup(i, src:GetBodygroup(i))
-		end
-
-		
-		ent:SetSubMaterial()
-		local mats = src:GetMaterials() or {}
-		for i = 1, #mats do
-			local sm = src:GetSubMaterial(i - 1)
-			if sm and sm ~= "" then
-				ent:SetSubMaterial(i - 1, sm)
-			end
-		end
-
-		
-		
-		
-		
-		
-		
-		local col = target.GetPlayerColor and target:GetPlayerColor() or nil
-		if not col or (col.x == 0 and col.y == 0 and col.z == 0) then
-			col = src.GetPlayerColor and src:GetPlayerColor() or col
-		end
-		if col then
-			ent:SetNWVector("PlayerColor", col)
-			if ent.SetPlayerColor then ent:SetPlayerColor(col) end
-		end
+	if modelChanged then
+		ent.hm_accSig = nil
+		ent.GetPlayerColor = function(self) return self.hm_playerColor end
 
 		local seq = -1
 		for _, name in ipairs(IDLE_SEQUENCES) do
@@ -165,47 +169,84 @@ local function ApplyTargetAppearance(card, target, targetChanged)
 			if s and s >= 0 then seq = s break end
 		end
 		if seq >= 0 then ent:ResetSequence(seq) end
-	end)
 
-	
-	local mins, maxs = ent:GetRenderBounds()
-	local topZ   = math.max(maxs.z, 64)
-	local lookZ  = topZ * 0.62
-	mdlPanel:SetFOV(36)
-	mdlPanel:SetCamPos(Vector(topZ * 0.95, 0, lookZ))
-	mdlPanel:SetLookAt(Vector(0, 0, lookZ))
+		SetupPortraitCamera(mdlPanel, ent)
+	end
+
+	pcall(function()
+		local skin = src:GetSkin() or 0
+		if ent:GetSkin() ~= skin then ent:SetSkin(skin) end
+
+		for i = 0, ent:GetNumBodyGroups() - 1 do
+			local bg = src:GetBodygroup(i)
+			if ent:GetBodygroup(i) ~= bg then ent:SetBodygroup(i, bg) end
+		end
+
+		local mats = ent:GetMaterials() or {}
+		for i = 0, #mats - 1 do
+			local sm = src:GetSubMaterial(i) or ""
+			if (ent:GetSubMaterial(i) or "") ~= sm then
+				ent:SetSubMaterial(i, sm)
+			end
+		end
+
+		local cloth = target:GetNWString("Colthesmain", "")
+		if cloth ~= "" then ent:SetNWString("Colthesmain", cloth) end
+
+		local col = target.GetPlayerColor and target:GetPlayerColor() or nil
+		if not col or (col.x == 0 and col.y == 0 and col.z == 0) then
+			col = target:GetNWVector("PlayerColor", col or Vector(1, 1, 1))
+		end
+		ent.hm_playerColor = col
+		ent:SetNWVector("PlayerColor", col)
+
+		local sig = AccessorySignature(target:GetNetVar("Accessories")) .. "|" .. tostring(col)
+		if ent.hm_accSig ~= sig then
+			ClearAccessoryModels(ent)
+			ent.hm_accSig = sig
+		end
+	end)
 end
 
 local function EnsureTargetModel()
 	if IsValid(targetModelPanel) then return targetModelPanel end
 
-	
 	local card = vgui.Create("DPanel")
 	if not IsValid(card) then return nil end
 	card:SetMouseInputEnabled(false)
 	card.Paint = function(self, w, h)
-		draw.RoundedBox(6, 0, 0, w, h, Color(10, 10, 10, 200))
-		draw.RoundedBoxEx(6, 0, 0, math.max(2, w * 0.03), h, Color(210, 30, 30, 220), true, false, true, false)
+		surface.SetDrawColor(PAL.bg)
+		surface.DrawRect(0, 0, w, h)
+
+		zb.HitmanDrawZigZag(0, 0, w, h, ScrH() / 1080)
+
+		if hitman_isDuel then
+			local pulse = math.abs(math.sin(CurTime() * 3))
+			surface.SetDrawColor(PAL.red.r, PAL.red.g, PAL.red.b, 120 + 120 * pulse)
+			surface.DrawOutlinedRect(0, 0, w, h, 2)
+		else
+			surface.SetDrawColor(PAL.border)
+			surface.DrawOutlinedRect(0, 0, w, h, 1)
+		end
+
+		surface.SetDrawColor(PAL.red)
+		surface.DrawRect(0, 0, math.max(2, math.floor(w * 0.025)), h)
 	end
 
-	
 	local mdlPanel = vgui.Create("DModelPanel", card)
 	mdlPanel:SetMouseInputEnabled(false)
 	mdlPanel:SetAnimated(true)
-	mdlPanel:SetAmbientLight(Color(150, 150, 150))
+	mdlPanel:SetAmbientLight(Color(140, 140, 140))
 	mdlPanel:SetDirectionalLight(BOX_TOP,   Color(255, 255, 255))
-	mdlPanel:SetDirectionalLight(BOX_FRONT, Color(220, 220, 220))
+	mdlPanel:SetDirectionalLight(BOX_FRONT, Color(210, 210, 210))
+	mdlPanel:SetDirectionalLight(BOX_RIGHT, Color(120, 40, 40))
 	mdlPanel:SetColor(Color(255, 255, 255))
 
 	function mdlPanel:LayoutEntity(ent)
 		if self.bAnimated then self:RunAnimation() end
-		ent:SetAngles(Angle(0, (RealTime() * 25) % 360, 0))  
+		ent:SetAngles(Angle(0, (RealTime() * 25) % 360, 0))
 	end
 
-	
-	
-	
-	
 	function mdlPanel:PostDrawModel(ent)
 		if not IsValid(ent) then return end
 		local tgt = self.targetEnt
@@ -213,23 +254,27 @@ local function EnsureTargetModel()
 		if not (DrawAccesories and hg and hg.Accessories) then return end
 
 		local acc = tgt:GetNetVar("Accessories")
-		if not acc or acc == "none" then return end
+		if not acc or acc == "none" or acc == "" then return end
 
 		local function drawOne(key)
+			if not key or key == "" then return end
 			local data = hg.Accessories[key]
 			if not data then return end
-			
-			
 			pcall(DrawAccesories, ent, ent, key, data, false, true)
 		end
 
 		if istable(acc) then
+			ent.PredictedAccessories = acc
 			for i = 1, #acc do drawOne(acc[i]) end
 		else
 			drawOne(acc)
 		end
 
 		ent:SetupBones()
+	end
+
+	function mdlPanel:OnRemove()
+		ClearAccessoryModels(self.Entity)
 	end
 
 	card.modelPanel = mdlPanel
@@ -239,12 +284,34 @@ local function EnsureTargetModel()
 	return card
 end
 
+net.Receive("hitman_dialogue", function()
+	QueueDialogue(net.ReadString())
+end)
 
-local nextPortraitRefresh = 0
+hook.Add("Think", "hitman_dialogue_queue", function()
+	if #hitman_dialogueQueue == 0 then return end
+
+	local me = IsValid(lply) and lply or LocalPlayer()
+	if (zb.CROUND_MAIN or zb.CROUND) ~= "hitman" or zb.ROUND_STATE ~= 1 or not (IsValid(me) and me:Alive()) then
+		hitman_dialogueQueue = {}
+		return
+	end
+
+	if IsValid(zb.FurBriefing) or IsValid(zb.HitmanDialogueWindow) then return end
+
+	local text = table.remove(hitman_dialogueQueue, 1)
+
+	local dialogue = vgui.Create("ZB_HitmanDialogue")
+	if IsValid(dialogue) then
+		dialogue:SetTextAutoClose(text)
+	end
+end)
+
 hook.Add("Think", "hitman_target_model", function()
 	local me   = IsValid(lply) and lply or LocalPlayer()
 	local show =
-		zb.ROUND_STATE == 1
+		(zb.CROUND_MAIN or zb.CROUND) == "hitman"
+		and zb.ROUND_STATE == 1
 		and IsValid(me) and me:Alive()
 		and (zb.ROUND_START + 8.5 <= CurTime())
 		and IsValid(hitman_currentTarget)
@@ -257,18 +324,10 @@ hook.Add("Think", "hitman_target_model", function()
 	local card = EnsureTargetModel()
 	if not IsValid(card) then return end
 
-	
-	
-	if lastModelTarget ~= hitman_currentTarget then
-		ApplyTargetAppearance(card, hitman_currentTarget, true)
-		lastModelTarget   = hitman_currentTarget
-		nextPortraitRefresh = CurTime() + 0.4
-	elseif CurTime() >= nextPortraitRefresh then
-		ApplyTargetAppearance(card, hitman_currentTarget, false)
-		nextPortraitRefresh = CurTime() + 0.4
-	end
+	local changed = (lastModelTarget ~= hitman_currentTarget)
+	SyncTargetAppearance(card, hitman_currentTarget, changed)
+	lastModelTarget = hitman_currentTarget
 
-	
 	local screenW, screenH = ScrW(), ScrH()
 	local scale  = screenH / 1080
 	local panelW = math.floor(260 * scale)
@@ -292,10 +351,6 @@ hook.Add("Think", "hitman_target_model", function()
 	end
 end)
 
-
-
-
-
 function MODE:RenderScreenspaceEffects()
 	if zb.ROUND_START + 7.5 < CurTime() then return end
 
@@ -305,106 +360,102 @@ function MODE:RenderScreenspaceEffects()
 	surface.DrawRect(-1, -1, ScrW() + 1, ScrH() + 1)
 end
 
-
-
-
-
 function MODE:HUDPaint()
 	local screenW = ScrW()
 	local screenH = ScrH()
 
-	
 	if lply:Alive() and zb.ROUND_START + 8.5 >= CurTime() then
 		zb.RemoveFade()
 
 		local fade = math.Clamp(zb.ROUND_START + 8 - CurTime(), 0, 1)
 
 		local eventname = GetGlobalString("ZB_EventName", "Hitman")
-		draw.SimpleText("Hitman", "ZB_HomicideMediumLarge", screenW * 0.5, screenH * 0.1, Color(0, 162, 255, 255 * fade), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		draw.SimpleText(eventname, "ZB_HomicideMediumLarge", screenW * 0.5, screenH * 0.1, Color(215, 215, 215, 255 * fade), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-		local rolename  = GetGlobalString("ZB_EventRole", "Hitman")
-		draw.SimpleText("You are a " .. rolename, "ZB_HomicideMediumLarge", screenW * 0.5, screenH * 0.5, Color(0, 120, 190, 255 * fade), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		local rolename = GetGlobalString("ZB_EventRole", "Hitman")
+		draw.SimpleText("You are a " .. rolename, "ZB_HomicideMediumLarge", screenW * 0.5, screenH * 0.5, Color(175, 35, 35, 255 * fade), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
 		local objective = GetGlobalString("ZB_EventObjective", "")
-		draw.SimpleText(objective, "ZB_HomicideMedium", screenW * 0.5, screenH * 0.9, Color(0, 120, 190, 255 * fade), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		draw.SimpleText(objective, "ZB_HomicideMedium", screenW * 0.5, screenH * 0.9, Color(150, 150, 150, 255 * fade), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 	end
 
-	
-	
-	
 	if zb.ROUND_STATE ~= 1 then return end
-	if not lply:Alive()    then return end
-	if zb.ROUND_START + 8.5 > CurTime() then return end  
+	if not lply:Alive() then return end
+	if zb.ROUND_START + 8.5 > CurTime() then return end
 
 	EnsureHudFonts()
 	if not hudFont then return end
 
-	local scale  = screenH / 1080
+	local scale = screenH / 1080
 
-	
 	local panelW  = math.floor(260 * scale)
 	local panelH  = math.floor(54  * scale)
 	local padX    = math.floor(12  * scale)
 	local padY    = math.floor(6   * scale)
-	local cornerR = math.floor(6   * scale)
-	local accentW = math.floor(4   * scale)
+	local accentW = math.max(2, math.floor(4 * scale))
 
-	
 	local posX = math.floor(screenW / 2 - panelW / 2)
 	local posY = math.floor(screenH * 0.88)
 
-	
-	draw.RoundedBox(cornerR, posX, posY, panelW, panelH, Color(10, 10, 10, 190))
+	surface.SetDrawColor(PAL.bg)
+	surface.DrawRect(posX, posY, panelW, panelH)
 
-	
-	draw.RoundedBoxEx(cornerR, posX, posY, accentW, panelH, Color(210, 30, 30, 220), true, false, true, false)
+	render.SetScissorRect(posX, posY, posX + panelW, posY + panelH, true)
+		zb.HitmanDrawZigZag(posX, posY, panelW, panelH, scale)
+	render.SetScissorRect(0, 0, 0, 0, false)
+	if hitman_isDuel then
+		local pulse = math.abs(math.sin(CurTime() * 3))
+		surface.SetDrawColor(PAL.red.r, PAL.red.g, PAL.red.b, 120 + 120 * pulse)
+		surface.DrawOutlinedRect(posX, posY, panelW, panelH, 2)
+	else
+		surface.SetDrawColor(PAL.border)
+		surface.DrawOutlinedRect(posX, posY, panelW, panelH, 1)
+	end
+	surface.SetDrawColor(PAL.red)
+	surface.DrawRect(posX, posY, accentW, panelH)
 
-	
 	surface.SetFont(hudFontSmall)
-	surface.SetTextColor(180, 180, 180, 220)
+	surface.SetTextColor(PAL.textDim.r, PAL.textDim.g, PAL.textDim.b, PAL.textDim.a)
 	surface.SetTextPos(posX + accentW + padX, posY + padY)
 	surface.DrawText("TARGET")
 
-	
-	local targetName = IsValid(hitman_currentTarget)
-		and GetCharacterName(hitman_currentTarget)
-		or  "Waiting..."
+	local _, labelH = surface.GetTextSize("TARGET")
 
-	local nameAlpha = IsValid(hitman_currentTarget) and 255 or 160
 
-	
-	local r, g, b = 160, 160, 160
-	if IsValid(hitman_currentTarget) then
+	local hasTarget  = IsValid(hitman_currentTarget)
+	local targetName = hasTarget and GetCharacterName(hitman_currentTarget) or "Waiting..."
+
+	local r, g, b, a = 120, 120, 120, 170
+	if hasTarget then
 		local pulse = math.abs(math.sin(CurTime() * 2))
-		r = math.floor(220 + 35 * pulse)
-		g = 40
-		b = 40
+		r = math.floor(Lerp(pulse * 0.35, 230, 200))
+		g = math.floor(Lerp(pulse * 0.35, 230, 60))
+		b = math.floor(Lerp(pulse * 0.35, 230, 60))
+		a = 255
 	end
 
-	
-	local _, labelH = surface.GetTextSize("TARGET")  
-
 	surface.SetFont(hudFont)
-	surface.SetTextColor(r, g, b, nameAlpha)
+	surface.SetTextColor(r, g, b, a)
 	surface.SetTextPos(posX + accentW + padX, posY + padY + labelH + math.floor(2 * scale))
 	surface.DrawText(targetName)
 
-	
 	local iconX  = posX + panelW - padX - math.floor(10 * scale)
 	local iconY  = posY + math.floor(panelH / 2)
-	local iconR  = math.floor(7  * scale)
-	local armLen = math.floor(3  * scale)
+	local iconR  = math.floor(7 * scale)
+	local armLen = math.floor(3 * scale)
 	local thick  = math.max(1, math.floor(1.5 * scale))
 
-	surface.SetDrawColor(210, 30, 30, 180)
+	surface.SetDrawColor(170, 170, 170, 200)
 	surface.DrawOutlinedRect(iconX - iconR, iconY - iconR, iconR * 2, iconR * 2, thick)
-	surface.DrawRect(iconX - iconR - armLen, iconY - thick, armLen,   thick * 2)
-	surface.DrawRect(iconX + iconR,          iconY - thick, armLen,   thick * 2)
+	surface.DrawRect(iconX - iconR - armLen, iconY - thick, armLen,    thick * 2)
+	surface.DrawRect(iconX + iconR,          iconY - thick, armLen,    thick * 2)
 	surface.DrawRect(iconX - thick, iconY - iconR - armLen, thick * 2, armLen)
 	surface.DrawRect(iconX - thick, iconY + iconR,          thick * 2, armLen)
+
+	local dot = math.max(1, thick)
+	surface.SetDrawColor(PAL.red)
+	surface.DrawRect(iconX - dot, iconY - dot, dot * 2, dot * 2)
 end
-
-
 
 local wonply = nil
 
@@ -546,6 +597,8 @@ net.Receive("hitman_end", function()
 	end
 
 	hitman_currentTarget = nil
+	hitman_isDuel        = false
+	hitman_dialogueQueue = {}
 	roundend             = CurTime()
 
 	RemoveTargetModel()
@@ -555,6 +608,8 @@ end)
 
 function MODE:RoundStart()
 	hitman_currentTarget = nil
+	hitman_isDuel        = false
+	hitman_dialogueQueue = {}
 	RemoveTargetModel()
 
 	for _, ply in player.Iterator() do
