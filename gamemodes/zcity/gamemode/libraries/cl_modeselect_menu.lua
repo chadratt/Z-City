@@ -545,11 +545,377 @@ if CLIENT then
         end
         return tab
     end
+    surface.CreateFont("ZB_QM_MapName", {font = menufont, size = 18, weight = 500, antialias = true})
+    surface.CreateFont("ZB_QM_MapBig",  {font = menufont, size = 44, weight = 500, antialias = true})
+    local COL_RTV_RED   = Color(239, 47, 47, 180)
+    local COL_RTV_RED_H = Color(255, 80, 80, 230)
+    local MAP_TILE_MIN_W = 190
+    local MAP_TILE_GAP   = 8
+    local MAP_TILE_RATIO = 0.62
+    local MAP_MAX_CHIPS  = 9
+    zb.MapSelect = zb.MapSelect or {}
+    zb.MapSelect.Maps = zb.MapSelect.Maps or {}
+    zb.MapSelect.Current = zb.MapSelect.Current or game.GetMap()
+    local mapConfirmInstance = nil
+    local mapIconCache = {}
+    net.Receive("ZB_MapSel_List", function()
+        zb.MapSelect.Current = net.ReadString()
+        local count = net.ReadUInt(16)
+        local maps = {}
+        for i = 1, count do
+            maps[i] = net.ReadString()
+        end
+        zb.MapSelect.Maps = maps
+        if zb.MapSelect.OnList then zb.MapSelect.OnList() end
+    end)
+    local function RequestMapList()
+        net.Start("ZB_MapSel_Request")
+        net.SendToServer()
+    end
+    local function GetMapPrefix(map)
+        local prefix = string.match(map, "^([^_]+)_")
+        return prefix and prefix:lower() or nil
+    end
+    local function FormatMapName(map)
+        local parts = string.Explode("_", map)
+        if #parts > 1 then table.remove(parts, 1) end
+        for i, p in ipairs(parts) do
+            parts[i] = string.upper(string.Left(p, 1)) .. string.sub(p, 2)
+        end
+        return table.concat(parts, " ")
+    end
+    local function GetMapIcon(map)
+        local cached = mapIconCache[map]
+        if cached ~= nil then return cached or nil end
+        for _, path in ipairs({"maps/thumb/" .. map .. ".png", "maps/" .. map .. ".png"}) do
+            local mat = Material(path, "smooth")
+            if mat and not mat:IsError() then
+                mapIconCache[map] = mat
+                return mat
+            end
+        end
+        mapIconCache[map] = false
+        return nil
+    end
+    local function DrawMapCover(mat, x, y, w, h, alpha)
+        local tw, th = mat:Width(), mat:Height()
+        local u0, v0, u1, v1 = 0, 0, 1, 1
+        if tw > 0 and th > 0 then
+            local boxAspect, imgAspect = w / h, tw / th
+            if imgAspect > boxAspect then
+                local f = boxAspect / imgAspect
+                u0 = (1 - f) / 2
+                u1 = 1 - u0
+            else
+                local f = imgAspect / boxAspect
+                v0 = (1 - f) / 2
+                v1 = 1 - v0
+            end
+        end
+        surface.SetDrawColor(255, 255, 255, alpha or 255)
+        surface.SetMaterial(mat)
+        surface.DrawTexturedRectUV(x, y, w, h, u0, v0, u1, v1)
+    end
+    local function DrawMapPicture(map, w, h, hovered)
+        surface.SetDrawColor(15, 15, 15, 255)
+        surface.DrawRect(0, 0, w, h)
+        local icon = GetMapIcon(map)
+        if icon then
+            DrawMapCover(icon, 0, 0, w, h)
+        else
+            local prefix = GetMapPrefix(map)
+            draw.SimpleText(prefix and prefix:upper() or "?", "ZB_QM_MapBig", w / 2, h / 2 - 6, Color(255, 255, 255, 40), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText("no preview", "ZB_QM_Small", w / 2, h / 2 + 22, Color(255, 255, 255, 50), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        end
+        surface.SetDrawColor(0, 0, 0, hovered and 60 or 120)
+        surface.DrawRect(0, 0, w, h)
+    end
+    local function OpenMapConfirm(map, adminFrame)
+        if IsValid(mapConfirmInstance) then mapConfirmInstance:Remove() end
+        local isCurrent = (map == zb.MapSelect.Current)
+        local pop = vgui.Create("ZFrame")
+        mapConfirmInstance = pop
+        pop:SetSize(480, 420)
+        pop:Center()
+        pop:SetTitle("")
+        pop:SetDraggable(false)
+        pop:ShowCloseButton(false)
+        pop:SetBorder(false)
+        pop:MakePopup()
+        pop.Paint = DrawFrameBG
+        if IsValid(adminFrame) then adminFrame:SetMouseInputEnabled(false) end
+        local content = MakeContent(pop)
+        local header = vgui.Create("DPanel", content)
+        header:Dock(TOP)
+        header:SetTall(42)
+        header.Paint = function(self, w, h)
+            surface.SetDrawColor(COL_CAT)
+            surface.DrawRect(0, 0, w, h)
+            surface.SetDrawColor(COL_CATBAR)
+            surface.DrawRect(0, h - 5, w, 5)
+            draw.SimpleText("Change Map", "ZB_QM_Title", w / 2, h / 2 - 2, COL_TEXT, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        end
+        AddCloseButton(header, pop)
+        local preview = vgui.Create("DPanel", content)
+        preview:Dock(TOP)
+        preview:DockMargin(14, 14, 14, 0)
+        preview:SetTall(200)
+        preview.Paint = function(self, w, h)
+            DrawMapPicture(map, w, h, true)
+            surface.SetDrawColor(0, 0, 0, 170)
+            surface.DrawRect(0, h - 46, w, 46)
+            draw.SimpleText(FormatMapName(map), "ZB_QM_MapName", 12, h - 32, COL_TEXT, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(map, "ZB_QM_Small", 12, h - 13, COL_TEXT_DIM, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            surface.SetDrawColor(COL_RTV_RED)
+            surface.DrawOutlinedRect(0, 0, w, h, 2)
+        end
+        local btnBar = vgui.Create("DPanel", content)
+        btnBar:Dock(BOTTOM)
+        btnBar:SetTall(42)
+        btnBar:DockMargin(14, 0, 14, 14)
+        btnBar.Paint = nil
+        local yesBtn = vgui.Create("DButton", btnBar)
+        yesBtn:SetText("Yes")
+        ZcityBUTT(yesBtn, COL_GREEN, COL_GREEN_H)
+        yesBtn.DoClick = function()
+            surface.PlaySound(SND_CLICK)
+            net.Start("ZB_MapSel_Change")
+                net.WriteString(map)
+            net.SendToServer()
+            pop:Close()
+            if IsValid(adminFrame) then adminFrame:Close() end
+        end
+        local noBtn = vgui.Create("DButton", btnBar)
+        noBtn:SetText("No")
+        ZcityBUTT(noBtn, COL_ACCENT, COL_ACCENT_H)
+        noBtn.DoClick = function()
+            surface.PlaySound(SND_RELEASE)
+            pop:Close()
+        end
+        btnBar.PerformLayout = function(self, w, h)
+            local half = math.floor((w - 8) / 2)
+            yesBtn:SetPos(0, 0)
+            yesBtn:SetSize(half, h)
+            noBtn:SetPos(w - half, 0)
+            noBtn:SetSize(half, h)
+        end
+        local question = vgui.Create("DPanel", content)
+        question:Dock(FILL)
+        question.Paint = function(self, w, h)
+            local q = isCurrent and "Are you sure you would like to reload this map?"
+                or "Are you sure you would like to switch to this map?"
+            draw.SimpleText(q, "ZB_QM_Item", w / 2, h / 2 - 11, COL_TEXT, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText("Everyone on the server will be moved over after a short countdown.", "ZB_QM_Small", w / 2, h / 2 + 13, COL_TEXT_DIM, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        end
+        pop.OnRemove = function()
+            if mapConfirmInstance == pop then mapConfirmInstance = nil end
+            if IsValid(adminFrame) and not adminFrame.Closing then
+                adminFrame:SetMouseInputEnabled(true)
+            end
+        end
+        return pop
+    end
+    local function CreateMapTile(parent, map, adminFrame)
+        local tile = vgui.Create("DButton", parent)
+        tile:SetText("")
+        tile:SetCursor("hand")
+        tile.Map = map
+        tile.DisplayName = FormatMapName(map)
+        tile.Prefix = GetMapPrefix(map)
+        tile.SearchKey = (map .. " " .. tile.DisplayName):lower()
+        tile.OnCursorEntered = function() surface.PlaySound(SND_HOVER) end
+        tile.Paint = function(self, w, h)
+            local hovered = self:IsHovered()
+            local isCurrent = (self.Map == zb.MapSelect.Current)
+            DrawMapPicture(self.Map, w, h, hovered)
+            local stripH = 30
+            surface.SetDrawColor(0, 0, 0, 170)
+            surface.DrawRect(0, 0, w, stripH)
+            draw.SimpleText(self.DisplayName, "ZB_QM_MapName", 10, stripH / 2, COL_TEXT, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            surface.SetDrawColor(0, 0, 0, 150)
+            surface.DrawRect(0, h - 22, w, 22)
+            draw.SimpleText(self.Map, "ZB_QM_Small", 10, h - 11, COL_TEXT_DIM, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            if isCurrent then
+                surface.SetFont("ZB_QM_Small")
+                local tw = surface.GetTextSize("CURRENT")
+                draw.RoundedBox(0, w - tw - 18, h - 20, tw + 12, 18, COL_GREEN)
+                draw.SimpleText("CURRENT", "ZB_QM_Small", w - tw - 12, h - 11, COL_TEXT, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            end
+            local border
+            if isCurrent then
+                border = hovered and COL_GREEN_H or COL_GREEN
+            else
+                border = hovered and COL_RTV_RED_H or COL_RTV_RED
+            end
+            surface.SetDrawColor(border)
+            surface.DrawOutlinedRect(0, 0, w, h, hovered and 3 or 2)
+        end
+        tile.DoClick = function(self)
+            surface.PlaySound(SND_CLICK)
+            OpenMapConfirm(self.Map, adminFrame)
+        end
+        return tile
+    end
+    local function BuildMapsTab(parent, frame)
+        local tab = vgui.Create("DPanel", parent)
+        tab.Paint = nil
+        local tiles, visible = {}, {}
+        local activePrefix = nil
+        local loaded = #zb.MapSelect.Maps > 0
+        local toolbar = vgui.Create("DPanel", tab)
+        toolbar:Dock(TOP)
+        toolbar:SetTall(32)
+        toolbar:DockMargin(8, 8, 8, 6)
+        toolbar.Paint = nil
+        local refreshBtn = vgui.Create("DButton", toolbar)
+        refreshBtn:Dock(RIGHT)
+        refreshBtn:SetWide(96)
+        refreshBtn:DockMargin(8, 0, 0, 0)
+        refreshBtn:SetText("Refresh")
+        ZcityBUTT(refreshBtn)
+        local countLabel = vgui.Create("DPanel", toolbar)
+        countLabel:Dock(RIGHT)
+        countLabel:SetWide(130)
+        countLabel.Paint = function(self, w, h)
+            local txt = loaded and (#visible .. " / " .. #tiles .. " maps") or "loading..."
+            draw.SimpleText(txt, "ZB_QM_Small", w - 4, h / 2, COL_TEXT_DIM, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+        end
+        local searchBar = vgui.Create("DTextEntry", toolbar)
+        searchBar:Dock(FILL)
+        searchBar:SetFont("ZB_QM_Item")
+        searchBar:SetUpdateOnType(true)
+        searchBar.Paint = function(self, w, h)
+            surface.SetDrawColor(COL_TOGGLE_BG)
+            surface.DrawRect(0, 0, w, h)
+            surface.SetDrawColor(70, 70, 70, 255)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+            self:DrawTextEntryText(COL_TEXT, Color(120, 120, 120), COL_TEXT)
+            if self:GetText() == "" then
+                draw.SimpleText("Search maps...", "ZB_QM_Item", 8, h / 2, COL_TEXT_DIM, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            end
+        end
+        local chipRow = vgui.Create("DPanel", tab)
+        chipRow:Dock(TOP)
+        chipRow:SetTall(26)
+        chipRow:DockMargin(8, 0, 8, 8)
+        chipRow.Paint = nil
+        local scroll = vgui.Create("DScrollPanel", tab)
+        scroll:Dock(FILL)
+        scroll:DockMargin(8, 0, 8, 8)
+        StyleScroll(scroll)
+        local grid = vgui.Create("DPanel", scroll)
+        grid:Dock(TOP)
+        grid:SetTall(80)
+        grid.Paint = function(self, w, h)
+            if #visible > 0 then return end
+            local msg = loaded and "No maps match your search." or "Loading map list from the server..."
+            draw.SimpleText(msg, "ZB_QM_Item", w / 2, 30, COL_TEXT_DIM, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        end
+        grid.PerformLayout = function(self, w, h)
+            if w <= 0 then return end
+            local cols = math.max(2, math.floor((w + MAP_TILE_GAP) / (MAP_TILE_MIN_W + MAP_TILE_GAP)))
+            local tileW = math.floor((w - MAP_TILE_GAP * (cols - 1)) / cols)
+            local tileH = math.floor(tileW * MAP_TILE_RATIO)
+            for i, tile in ipairs(visible) do
+                local col = (i - 1) % cols
+                local row = math.floor((i - 1) / cols)
+                tile:SetPos(col * (tileW + MAP_TILE_GAP), row * (tileH + MAP_TILE_GAP))
+                tile:SetSize(tileW, tileH)
+            end
+            local rows = math.ceil(#visible / cols)
+            local newH = rows > 0 and (rows * (tileH + MAP_TILE_GAP) - MAP_TILE_GAP) or 80
+            if self:GetTall() ~= newH then
+                self:SetTall(newH)
+                scroll:InvalidateLayout()
+            end
+        end
+        local function ApplyFilter()
+            local query = string.Trim(searchBar:GetValue() or ""):lower()
+            visible = {}
+            for _, tile in ipairs(tiles) do
+                local ok = (not activePrefix or tile.Prefix == activePrefix)
+                    and (query == "" or string.find(tile.SearchKey, query, 1, true) ~= nil)
+                tile:SetVisible(ok)
+                if ok then visible[#visible + 1] = tile end
+            end
+            grid:InvalidateLayout(true)
+            scroll:InvalidateLayout()
+        end
+        local function MakeChip(label, prefix, count)
+            local chip = vgui.Create("DButton", chipRow)
+            chip:Dock(LEFT)
+            chip:DockMargin(0, 0, 6, 0)
+            chip:SetText("")
+            surface.SetFont("ZB_QM_Small")
+            local txt = count and (label .. "  " .. count) or label
+            chip:SetWide(surface.GetTextSize(txt) + 20)
+            chip.OnCursorEntered = function() surface.PlaySound(SND_HOVER) end
+            chip.Paint = function(self, w, h)
+                local active = (activePrefix == prefix)
+                surface.SetDrawColor(active and COL_ACCENT or (self:IsHovered() and COL_ROW_HOV or COL_ROW))
+                surface.DrawRect(0, 0, w, h)
+                surface.SetDrawColor(0, 0, 0, 55)
+                surface.DrawRect(0, h - 2, w, 2)
+                draw.SimpleText(txt, "ZB_QM_Small", w / 2, h / 2 - 1, active and COL_TEXT or COL_TEXT_DIM, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            end
+            chip.DoClick = function()
+                surface.PlaySound(SND_CLICK)
+                activePrefix = prefix
+                ApplyFilter()
+            end
+            return chip
+        end
+        local function Populate()
+            for _, t in ipairs(tiles) do
+                if IsValid(t) then t:Remove() end
+            end
+            tiles = {}
+            chipRow:Clear()
+            local prefixCount = {}
+            for _, map in ipairs(zb.MapSelect.Maps) do
+                tiles[#tiles + 1] = CreateMapTile(grid, map, frame)
+                local p = GetMapPrefix(map)
+                if p then prefixCount[p] = (prefixCount[p] or 0) + 1 end
+            end
+            local prefixes = {}
+            for p, c in pairs(prefixCount) do prefixes[#prefixes + 1] = {p = p, c = c} end
+            table.sort(prefixes, function(a, b)
+                if a.c == b.c then return a.p < b.p end
+                return a.c > b.c
+            end)
+            MakeChip("ALL", nil, #tiles)
+            local stillActive = (activePrefix == nil)
+            for i = 1, math.min(MAP_MAX_CHIPS, #prefixes) do
+                MakeChip(prefixes[i].p:upper(), prefixes[i].p, prefixes[i].c)
+                if prefixes[i].p == activePrefix then stillActive = true end
+            end
+            if not stillActive then activePrefix = nil end
+            ApplyFilter()
+        end
+        searchBar.OnValueChange = function() ApplyFilter() end
+        refreshBtn.DoClick = function()
+            surface.PlaySound(SND_CLICK)
+            RequestMapList()
+        end
+        local function OnList()
+            if not IsValid(tab) then return end
+            loaded = true
+            Populate()
+        end
+        zb.MapSelect.OnList = OnList
+        if loaded then Populate() end
+        RequestMapList()
+        tab.OnRemove = function()
+            if zb.MapSelect.OnList == OnList then zb.MapSelect.OnList = nil end
+            if IsValid(mapConfirmInstance) then mapConfirmInstance:Remove() end
+        end
+        return tab
+    end
     local function OpenAdminMenu()
         if IsValid(isMenuOpen) then return end
         local frame = vgui.Create("ZFrame")
         isMenuOpen = frame
-        frame:SetSize(math.min(980, ScrW() - 80), math.min(640, ScrH() - 80))
+        frame:SetSize(math.min(1180, ScrW() - 80), math.min(760, ScrH() - 80))
         frame:Center()
         frame:SetTitle("")
         frame:SetDraggable(true)
@@ -584,6 +950,7 @@ if CLIENT then
         if zb.AO and zb.AO.BuildRoundTab then
             sheet:AddSheet("ROUND", zb.AO.BuildRoundTab(sheet), nil, false, false, "Players in this round")
         end
+        sheet:AddSheet("MAPS", BuildMapsTab(sheet, frame), nil, false, false, "Change the server map")
         if zb.AO and zb.AO.Subscribe then
             zb.AO.Subscribe(true)
         end

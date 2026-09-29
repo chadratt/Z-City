@@ -102,6 +102,18 @@ function zb.AO.BuildRoundTab(parent)
             "ZB_QM_Small", 10, h / 2, COL_TEXT, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER
         )
     end
+    local notifyAllBtn = StyledButton(header, "Notify All Players", COL_GREEN, COL_GREEN_H)
+    notifyAllBtn:Dock(RIGHT)
+    notifyAllBtn:DockMargin(0, 4, 6, 4)
+    notifyAllBtn:SetWide(140)
+    notifyAllBtn.DoClick = function()
+        local targets = {}
+        for _, ply in player.Iterator() do
+            if IsValid(ply) then targets[#targets + 1] = ply end
+        end
+        if #targets == 0 then return end
+        zb.AO.OpenNotifyWindow(targets, "NOTIFY - ALL PLAYERS (" .. #targets .. ")")
+    end
     local scroll = vgui.Create("DScrollPanel", panel)
     scroll:Dock(FILL)
     scroll:DockMargin(0, 4, 0, 0)

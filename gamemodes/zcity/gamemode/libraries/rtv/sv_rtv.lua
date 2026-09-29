@@ -23,7 +23,6 @@ local mapWhitelist = {
       ["gm_sentimental98v3night"]                   = true,
       ["gm_denizen"]                   = true,
       ["ttt_clue_2022"]                   = true,
-      ["ttt_diescraper"]                   = true,
       ["ttt_fernwood"]                   = true,
       ["ttt_67thway_2022"]                   = true,
       ["ttt_fastfood_a6"]                   = true,
@@ -37,6 +36,11 @@ local mapWhitelist = {
       ["hmcd_aircraft"]                   = true,
       ["zs_richland_remix_v1a"]                   = true,
       ["zs_cursedwoods_v3"]                   = true,
+    ["gm_small_town"]                   = true,
+    ["zm_city-apocalypse4"]                   = true,
+    ["ttt_district"]                   = true,
+    ["ttt_highlife"]                   = true,
+    ["ttt_airbus_b3"]                   = true,
 }
 
 local function GetMapFamily(map)

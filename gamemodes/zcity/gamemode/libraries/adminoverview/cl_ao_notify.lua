@@ -1,7 +1,11 @@
 if not CLIENT then return end
 zb = zb or {}
 zb.AO = zb.AO or {}
-function zb.AO.OpenNotifyWindow(targets)
+local savedSettings = {
+    color = Color(255, 255, 255),
+    shaky = false,
+}
+function zb.AO.OpenNotifyWindow(targets, title)
     if not targets or #targets == 0 then return end
     local frame = vgui.Create("ZFrame")
     frame:SetSize(420, 440)
@@ -11,7 +15,7 @@ function zb.AO.OpenNotifyWindow(targets)
     frame:ShowCloseButton(false)
     frame:SetDraggable(true)
     local header = vgui.Create("DLabel", frame)
-    header:SetText("NOTIFY - " .. #targets .. " player(s)")
+    header:SetText(title or ("NOTIFY - " .. #targets .. " player(s)"))
     header:SetFont("ZB_QM_Category")
     header:SetTextColor(color_white)
     header:Dock(TOP)
@@ -34,13 +38,20 @@ function zb.AO.OpenNotifyWindow(targets)
     mixer:SetPalette(true)
     mixer:SetAlphaBar(false)
     mixer:SetWangs(true)
-    mixer:SetColor(Color(255, 255, 255))
+    mixer:SetColor(Color(savedSettings.color.r, savedSettings.color.g, savedSettings.color.b))
+    mixer.ValueChanged = function(self, col)
+        savedSettings.color = Color(col.r, col.g, col.b)
+    end
     local shakyCheck = vgui.Create("DCheckBoxLabel", frame)
     shakyCheck:SetText("Shaky text (pain-style wobble)")
     shakyCheck:SetTextColor(color_white)
     shakyCheck:Dock(TOP)
     shakyCheck:DockMargin(16, 2, 12, 10)
     shakyCheck:SizeToContents()
+    shakyCheck:SetChecked(savedSettings.shaky)
+    shakyCheck.OnChange = function(self, val)
+        savedSettings.shaky = val and true or false
+    end
     local btnRow = vgui.Create("DPanel", frame)
     btnRow:Dock(BOTTOM)
     btnRow:SetTall(40)
@@ -61,6 +72,9 @@ function zb.AO.OpenNotifyWindow(targets)
             msgEntry:SetPlaceholderText("Type a message first!")
             return
         end
+        local col = mixer:GetColor()
+        savedSettings.color = Color(col.r, col.g, col.b)
+        savedSettings.shaky = shakyCheck:GetChecked() and true or false
         net.Start("ZB_AO_Notify")
             net.WriteString(msg)
             net.WriteColor(mixer:GetColor())
