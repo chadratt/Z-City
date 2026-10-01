@@ -170,9 +170,9 @@ hook.Add("PlayerCanHearPlayersVoice", "RealisticVoice", function(listener,speake
 		if speak then hook.Run( "StartVoice", speaker, listener ) else hook.Run( "EndVoice", speaker, listener )  end
 	end
 
-	local Hook = hook.Run("HG_PlayerCanHearPlayersVoice", listener, speaker )
+	local Hook, HookIs3D = hook.Run("HG_PlayerCanHearPlayersVoice", listener, speaker )
 	if Hook ~= nil then
-		return Hook
+		return Hook, HookIs3D
 	end
 
 	return result,is3D
