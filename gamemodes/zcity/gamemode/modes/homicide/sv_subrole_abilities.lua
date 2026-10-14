@@ -128,3 +128,70 @@ hook.Add("PlayerPostThink", "HMCD_SubRoles_Abilities", function(ply)
 		end
 	end
 end)
+
+hook.Add("HG_PlayerFootstep", "HMCD_Latcher_SilentFootsteps", function(ply)
+	if(MODE.RoleChooseRoundTypes[MODE.Type] and ply:Alive() and (ply.SubRole == "traitor_latcher" or ply.SubRole == "traitor_latcher_soe"))then
+		return true
+	end
+end)
+
+local function HMCD_IsCultist(ply)
+	return IsValid(ply) and (ply.SubRole == "traitor_cultist" or ply.SubRole == "traitor_cultist_soe")
+end
+
+local function HMCD_GetRandomZCityWeapon(ply)
+	local based = weapons.IsBasedOn
+	local pool = {}
+	for _, wep in ipairs(weapons.GetList()) do
+		local classname = wep.ClassName
+		if classname and wep.Spawnable and (based(classname, "homigrad_base") or based(classname, "weapon_melee")) and not ply:HasWeapon(classname) then
+			pool[#pool + 1] = classname
+		end
+	end
+	if #pool == 0 then return nil end
+	return pool[math.random(#pool)]
+end
+
+local function HMCD_GiveCultistGift(ply)
+	ply:Notify("The pale man has granted you a gift")
+	local classname = HMCD_GetRandomZCityWeapon(ply)
+	if not classname then return end
+	local wep = ply:Give(classname)
+	if IsValid(wep) and wep.GetPrimaryAmmoType and wep:GetPrimaryAmmoType() >= 0 and wep:GetMaxClip1() > 0 then
+		ply:GiveAmmo(wep:GetMaxClip1() * 2, wep:GetPrimaryAmmoType(), true)
+	end
+end
+
+hook.Add("HomigradDamage", "HMCD_Cultist_TrackAttacker", function(ply, dmgInfo)
+	if not IsValid(ply) or not ply:IsPlayer() then return end
+	local attacker = dmgInfo:GetAttacker()
+	if not IsValid(attacker) or not attacker:IsPlayer() then
+		attacker = ply:GetPhysicsAttacker()
+	end
+	if IsValid(attacker) and attacker:IsPlayer() and attacker != ply then
+		ply.HMCD_CultistLastAttacker = attacker
+		ply.HMCD_CultistLastAttackTime = CurTime()
+	end
+end)
+
+hook.Add("PlayerDeath", "HMCD_Cultist_KillCounter", function(victim, inflictor, attacker)
+	if not IsValid(victim) then return end
+	local killer = attacker
+	if not IsValid(killer) or not killer:IsPlayer() or killer == victim then
+		if IsValid(victim.HMCD_CultistLastAttacker) and (victim.HMCD_CultistLastAttackTime or 0) + 30 > CurTime() then
+			killer = victim.HMCD_CultistLastAttacker
+		else
+			killer = nil
+		end
+	end
+	victim.HMCD_CultistLastAttacker = nil
+	victim.HMCD_CultistLastAttackTime = nil
+	if not MODE.RoleChooseRoundTypes[MODE.Type] then return end
+	if not IsValid(killer) or killer == victim or not HMCD_IsCultist(killer) then return end
+	if killer.HMCD_CultistGiftUsed then return end
+	killer.HMCD_CultistKills = (killer.HMCD_CultistKills or 0) + 1
+	if killer.HMCD_CultistKills >= 7 and killer:Alive() then
+		killer.HMCD_CultistGiftUsed = true
+		HMCD_GiveCultistGift(killer)
+	end
+end)

@@ -234,6 +234,93 @@ Can detect presence and potency of chemical agents in the air.]],
 			-- ply:SetNetVar("Inventory", inv)
 		-- end,
 	-- },
+	["traitor_latcher"] = {
+		Name = "Latcher",
+		Description = [[You have been endowed with the abilities of being stealthy and silent, Others may take notice of this and recognize your prowess and see you as suspicious. Be cautious.]],
+		Objective = "You have the ability to walk and run without being heard... use this to your advantage",
+		SpawnFunction = function(ply)
+			ply:Give("weapon_hg_fiberwire")
+			ply:Give("weapon_tomahawkasspocket")
+			ply:Give("weapon_hg_m18_tpik")
+			ply:Give("weapon_claymore")
+			ply:Give("weapon_tranquilizer")
+
+			ply.organism.stamina.max = 220
+			local inv = ply:GetNetVar("Inventory", {})
+			inv["Weapons"] = inv["Weapons"] or {}
+			inv["Weapons"]["hg_flashlight"] = true
+
+			ply:SetNetVar("Inventory", inv)
+		end,
+	},
+	["traitor_latcher_soe"] = {
+		Name = "Latcher",
+		Description = [[You have been endowed with the abilities of being stealthy and silent, Others may take notice of this and recognize your prowess and see you as suspicious. Be cautious.]],
+		Objective = "You have the ability to walk and run without being heard... use this to your advantage",
+		SpawnFunction = function(ply)
+			ply:Give("weapon_hg_fiberwire")
+			ply:Give("weapon_tranquilizer")
+			ply:Give("weapon_tomahawkasspocket")
+			ply:Give("weapon_hg_gebalteladung_tpik")
+			ply:Give("weapon_hg_rpg40")
+
+			ply.organism.recoilmul = 1
+			ply.organism.stamina.max = 220
+			local inv = ply:GetNetVar("Inventory", {})
+			inv["Weapons"] = inv["Weapons"] or {}
+			inv["Weapons"]["hg_flashlight"] = true
+
+			ply:SetNetVar("Inventory", inv)
+		end,
+	},
+	["traitor_cultist"] = {
+		Name = "Cultist",
+		Description = [[One of the pale mans faithful ones.. Deal with the heretics and complete the ritual...]],
+		Objective = "You are one of the pale mans faithful ones, deal with the heretics and complete the ritual..",
+		SpawnFunction = function(ply)
+			ply:Give("weapon_hg_m18_tpik")
+			ply:Give("weapon_hg_flaszarya_tpik")
+			ply:Give("weapon_hg_slam")
+			ply:Give("weapon_eft_melee_cultist")
+			ply:Give("weapon_taser")
+			ply:Give("weapon_traitor_suit_cultist")
+
+			ply.HMCD_CultistKills = 0
+			ply.HMCD_CultistGiftUsed = nil
+
+			ply.organism.stamina.max = 220
+			local inv = ply:GetNetVar("Inventory", {})
+			inv["Weapons"] = inv["Weapons"] or {}
+			inv["Weapons"]["hg_flashlight"] = true
+
+			ply:SetNetVar("Inventory", inv)
+		end,
+	},
+	["traitor_cultist_soe"] = {
+		Name = "Cultist",
+		Description = [[One of the pale mans faithful ones.. Deal with the heretics and complete the ritual...]],
+		Objective = "You are one of the pale mans faithful ones, deal with the heretics and complete the ritual..",
+		SpawnFunction = function(ply)
+			ply:Give("weapon_hg_m18_tpik")
+			ply:Give("weapon_hg_flaszarya_tpik")
+			ply:Give("weapon_claymore")
+			ply:Give("weapon_hg_slam")
+			ply:Give("weapon_eft_melee_cultist")
+			ply:Give("weapon_taser")
+			ply:Give("weapon_traitor_suit_cultist")
+
+			ply.HMCD_CultistKills = 0
+			ply.HMCD_CultistGiftUsed = nil
+
+			ply.organism.recoilmul = 1
+			ply.organism.stamina.max = 220
+			local inv = ply:GetNetVar("Inventory", {})
+			inv["Weapons"] = inv["Weapons"] or {}
+			inv["Weapons"]["hg_flashlight"] = true
+
+			ply:SetNetVar("Inventory", inv)
+		end,
+	},
 	["traitor_zombie"] = {
 		Name = "Zombie",
 		Description = [[Can infect other players silently.
@@ -273,6 +360,7 @@ MODE.Professions = {
 			ply:Give("weapon_adrenaline")
 			ply:Give("weapon_morphine")
 			ply:Give("weapon_painkillers")
+			ply:Give("weapon_mannitol")
 		end,
 	},
 	["huntsman"] = {
@@ -291,7 +379,9 @@ MODE.Professions = {
 	["cook"] = {
 		Name = "Cook",
 		SpawnFunction = function(ply)
-			--; It's a bad practice to give professions any weapons or tools
+			ply:Give("weapon_bigconsumable")
+			ply:Give("weapon_smallconsumable")
+			ply:Give("weapon_kitchenknife")
 		end,
 	},
 	["builder"] = {
@@ -318,6 +408,8 @@ MODE.RoleChooseRoundTypes = {
 			["traitor_infiltrator"] = true,
 			["traitor_chemist"] = true,
 			["traitor_assasin"] = true,
+			["traitor_latcher"] = true,
+			["traitor_cultist"] = true,
 			--; ОБЪЕДЕНИТЬ ХИМИКА И ДИВЕРСАНТА!!! наверное
 			-- ["traitor_demoman"] = true,
 		},
@@ -346,6 +438,8 @@ MODE.RoleChooseRoundTypes = {
 			["traitor_infiltrator_soe"] = true,
 			-- ["traitor_chemist_soe"] = true,
 			["traitor_assasin_soe"] = true,
+			["traitor_latcher_soe"] = true,
+			["traitor_cultist_soe"] = true,
 			-- ["traitor_demoman_soe"] = true,
 		},
 		Professions = {
