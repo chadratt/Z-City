@@ -5,7 +5,6 @@ MODE.ROUND_TIME = 300
 MODE.Chance = 0.04
 MODE.ForBigMaps = false
 MODE.buymenu = false
-MODE.RadarPulse = 5
 MODE.Rounds = 2
 
 util.AddNetworkString("hidden_start")
@@ -258,7 +257,7 @@ util.AddNetworkString("hidden_radar")
 
 function MODE:Think()
 	if (self.NextRadar or 0) > CurTime() then return end
-	self.NextRadar = CurTime() + (self.RadarPulse or 5)
+	self.NextRadar = CurTime() + (self.RadarPulse or 3)
 
 	local blips = {}
 	local receivers = {}

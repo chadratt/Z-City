@@ -6,6 +6,11 @@ MODE.PrintName = "The Hidden"
 MODE.HiddenCount = 1
 MODE.PrepTime = 10
 MODE.RadarRange = 1500
+MODE.RadarPulse = 3
+MODE.RadarCloseRange = 400
+MODE.RadarBatteryTime = 30
+MODE.RadarRechargeTime = 60
+MODE.RadarMinCharge = 10
 
 function MODE:HG_MovementCalc_2(mul, ply, cmd, mv)
     if (zb.ROUND_START or 0) + self.PrepTime > CurTime() and cmd then
@@ -24,5 +29,12 @@ function MODE:HG_MovementCalc_2(mul, ply, cmd, mv)
         end
 
         mul[1] = 0
+    end
+end
+
+function MODE:StartCommand(ply, cmd)
+    if (zb.ROUND_START or 0) + self.PrepTime > CurTime() then
+        cmd:RemoveKey(IN_ATTACK)
+        cmd:RemoveKey(IN_ATTACK2)
     end
 end

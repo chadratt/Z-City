@@ -226,6 +226,9 @@ end
 
 vgui.Register("ZB_HiddenTutorial", PANEL, "EditablePanel")
 
+local radarEnabled = true
+local radarBattery = 100
+
 local MUSIC_FADE = 2
 local MUSIC_COMBAT_TIME = 20
 
@@ -439,6 +442,7 @@ net.Receive("hidden_start", function()
 	musicAmbienceTrack = musicAmbience[math.random(#musicAmbience)]
 	musicCombatUntil = 0
 	musicFailed = {}
+	radarBattery = 100
 
 	if round <= 1 then
 		MusicDrop(musicIntro)
@@ -521,10 +525,12 @@ function MODE:HUDPaint()
 end
 
 local RADAR_RANGE = 1500
-local RADAR_PULSE = 5
+local RADAR_PULSE = 3
 local RADAR_SOUND = "hidden/radar.mp3"
+local RADAR_SOUND_MEDIUM = "hidden/radar_medium.mp3"
+local RADAR_SOUND_CLOSE = "hidden/radarveryclose.mp3"
+local RADAR_SOUND_OFF = "hidden/powerDown.mp3"
 
-local radarEnabled = true
 local radarBlips = {}
 local radarTime = -100
 
@@ -549,6 +555,7 @@ net.Receive("hidden_radar", function()
 	local yaw = math.rad(valid and lply:EyeAngles().y or 0)
 	local fx, fy = math.cos(yaw), math.sin(yaw)
 	local selfIndex = valid and lply:EntIndex() or -1
+	local nearest
 
 	for i = 1, count do
 		local index = net.ReadUInt(8)
@@ -559,6 +566,11 @@ net.Receive("hidden_radar", function()
 		if (pos.x - origin.x) * fx + (pos.y - origin.y) * fy <= 0 then continue end
 
 		blips[#blips + 1] = {pos = pos, hidden = hidden}
+
+		if hidden then
+			local dist = math.sqrt((pos.x - origin.x) ^ 2 + (pos.y - origin.y) ^ 2)
+			if not nearest or dist < nearest then nearest = dist end
+		end
 	end
 
 	if not valid or not radarEnabled then
@@ -569,7 +581,46 @@ net.Receive("hidden_radar", function()
 	radarBlips = blips
 	radarTime = CurTime()
 
-	surface.PlaySound(RADAR_SOUND)
+	if not nearest then
+		surface.PlaySound(RADAR_SOUND)
+	elseif nearest <= (MODE.RadarCloseRange or 400) then
+		surface.PlaySound(RADAR_SOUND_CLOSE)
+	else
+		surface.PlaySound(RADAR_SOUND_MEDIUM)
+	end
+end)
+
+local function RadarShutdown()
+	if not radarEnabled then return end
+
+	radarEnabled = false
+	radarBlips = {}
+	radarTime = -100
+
+	local lply = LocalPlayer()
+	if IsValid(lply) then
+		lply:StopSound(RADAR_SOUND)
+		lply:StopSound(RADAR_SOUND_MEDIUM)
+		lply:StopSound(RADAR_SOUND_CLOSE)
+	end
+
+	surface.PlaySound(RADAR_SOUND_OFF)
+end
+
+hook.Add("Think", "hidden_radar_battery", function()
+	if not IsIris(LocalPlayer()) then return end
+
+	local ft = FrameTime()
+
+	if radarEnabled then
+		radarBattery = math.max(radarBattery - ft * 100 / (MODE.RadarBatteryTime or 30), 0)
+
+		if radarBattery <= 0 then
+			RadarShutdown()
+		end
+	else
+		radarBattery = math.min(radarBattery + ft * 100 / (MODE.RadarRechargeTime or 60), 100)
+	end
 end)
 
 local function DrawDisc(x, y, radius, segments, col, alpha)
@@ -618,13 +669,38 @@ end
 
 function MODE:HUDPaintBackground()
 	local lply = LocalPlayer()
-	if not radarEnabled or not IsIris(lply) then return end
+	if not IsIris(lply) then return end
 
 	local sh = ScrH()
 	local radius = ScreenScale(48)
 	local margin = ScreenScale(8)
+	local barH = math.max(ScreenScale(3), 5)
+	local barGap = ScreenScale(3)
 	local cx = margin + radius
-	local cy = sh - margin
+	local cy = sh - margin - barH - barGap
+
+	local frac = math.Clamp(radarBattery / 100, 0, 1)
+	local barX, barY, barW = cx - radius, cy + barGap, radius * 2
+
+	surface.SetDrawColor(0, 0, 0, 170)
+	surface.DrawRect(barX, barY, barW, barH)
+	surface.SetDrawColor(255 * (1 - frac), 200 * frac + 30, 40, 230)
+	surface.DrawRect(barX + 1, barY + 1, (barW - 2) * frac, barH - 2)
+	surface.SetDrawColor(colRadarLine.r, colRadarLine.g, colRadarLine.b, colRadarLine.a)
+	surface.DrawOutlinedRect(barX, barY, barW, barH, 1)
+
+	draw.SimpleText(math.ceil(radarBattery) .. "%", "ZB_HiddenTutorial", barX + barW + ScreenScale(3), barY + barH * 0.5, color_white, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+	if not radarEnabled then
+		draw.NoTexture()
+		surface.SetDrawColor(0, 0, 0, 120)
+		surface.DrawPoly(ArcPoints(cx, cy, radius, 32))
+		DrawArc(cx, cy, radius, 32, colRadarGrid)
+		surface.SetDrawColor(colRadarGrid.r, colRadarGrid.g, colRadarGrid.b, colRadarGrid.a)
+		surface.DrawLine(cx - radius, cy, cx + radius, cy)
+		draw.SimpleText("RADAR OFF", "ZB_HiddenTutorial", cx, cy - radius * 0.4, Color(200, 200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		return
+	end
 
 	draw.NoTexture()
 	surface.SetDrawColor(colRadarBack.r, colRadarBack.g, colRadarBack.b, colRadarBack.a)
@@ -644,8 +720,10 @@ function MODE:HUDPaintBackground()
 		DrawThickArc(cx, cy, radius * age, math.max(ScreenScale(1.5), 3), 32, colRadarPulse, 255 * (1 - age))
 	end
 
-	if age >= 0 and age < RADAR_PULSE then
-		local alpha = 255 * math.Clamp((RADAR_PULSE - age) / (RADAR_PULSE * 0.6), 0, 1)
+	local pulse = self.RadarPulse or RADAR_PULSE
+
+	if age >= 0 and age < pulse then
+		local alpha = 255 * math.Clamp((pulse - age) / (pulse * 0.6), 0, 1)
 		local origin = lply:GetPos()
 		local yaw = math.rad(EyeAngles().y)
 		local fx, fy = math.cos(yaw), math.sin(yaw)
@@ -681,13 +759,17 @@ function MODE:HUDPaintBackground()
 end
 
 local function ToggleRadar()
-	radarEnabled = not radarEnabled
-
-	if not radarEnabled then
-		radarBlips = {}
-		radarTime = -100
-		LocalPlayer():StopSound(RADAR_SOUND)
+	if radarEnabled then
+		RadarShutdown()
+		return
 	end
+
+	if radarBattery < (MODE.RadarMinCharge or 10) then
+		chat.AddText(Color(255, 220, 0), "Radar battery is too low to power on.")
+		return
+	end
+
+	radarEnabled = true
 end
 
 hook.Add("radialOptions", "hidden_radar_toggle", function()
