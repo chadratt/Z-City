@@ -1,5 +1,3 @@
---;; Huge thanks to the developers of the Enhanced PlayerModel Selector mod. I borrowed some parts of it for certain features.
-
 local clr = {
 	bg = Color(28, 28, 28, 240),
 	border = Color(75, 75, 75),
@@ -29,7 +27,8 @@ local idleAnims = {"idle_all_01", "menu_walk", "pose_standing_02", "idle_fist", 
 local Menu
 
 local function CanUse()
-	return engine.ActiveGamemode() == "sandbox" or LocalPlayer():IsAdmin()
+	if engine.ActiveGamemode() == "sandbox" then return true end
+	return hg and hg.PMS and hg.PMS.CanUse(LocalPlayer()) or false
 end
 
 local function PaintBG(self, w, h)
@@ -161,7 +160,13 @@ local function ToggleRow(parent, text, getState, onClick)
 end
 
 function Menu()
-	if not CanUse() then return end
+	if not CanUse() then
+		local lp = LocalPlayer()
+		if hg and hg.PMS and IsValid(lp) and hg.PMS.HasGroupAccess(lp) then
+			chat.AddText(Color(220, 150, 45), "The model selector only works in Scary Event, Homicide, Event and Hitman rounds")
+		end
+		return
+	end
 	if IsValid(PMS_Frame) then PMS_Frame:Close() end
 
 	local lply = LocalPlayer()
@@ -538,6 +543,18 @@ function Menu()
 
 	frame.OnClose = function()
 		timer.Remove("ZC_PMS_AutoApply")
+	end
+
+	local nextCheck = 0
+	local baseThink = frame.Think
+	frame.Think = function(self, ...)
+		if baseThink then baseThink(self, ...) end
+		if self.zc_pms_closing or nextCheck > RealTime() then return end
+		nextCheck = RealTime() + 1
+		if not CanUse() then
+			self.zc_pms_closing = true
+			self:Close()
+		end
 	end
 end
 

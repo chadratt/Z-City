@@ -6,10 +6,24 @@ util.AddNetworkString("ZC_PMS_Reset")
 util.AddNetworkString("ZC_PMS_Open")
 util.AddNetworkString("ZC_PMS_Armor")
 
-local function CanUse(ply)
+local function HasAccess(ply)
 	if not IsValid(ply) or not ply:IsPlayer() then return false end
 	if engine.ActiveGamemode() == "sandbox" then return true end
-	return ply:IsAdmin()
+	return hg.PMS and hg.PMS.HasGroupAccess(ply) or false
+end
+
+local function ModeAllowed()
+	return hg.PMS and hg.PMS.IsModeAllowed() or false
+end
+
+local function CanUse(ply)
+	return HasAccess(ply) and ModeAllowed()
+end
+
+local function NotAllowedMsg(ply)
+	if IsValid(ply) then
+		ply:ChatPrint("The model selector only works in Scary Event, Homicide, Event and Hitman rounds")
+	end
 end
 
 hg.PMSOverrides = hg.PMSOverrides or {}
@@ -59,7 +73,8 @@ local function LogPMSAction(ply, mdl, nick)
 end
 
 net.Receive("ZC_PMS_Apply", function(len, ply)
-	if not CanUse(ply) then return end
+	if not HasAccess(ply) then return end
+	if not ModeAllowed() then NotAllowedMsg(ply) return end
 	if not ply:Alive() then ply:ChatPrint("You must be alive to change your model") return end
 	if (ply.zc_pms_next or 0) > CurTime() then return end
 	ply.zc_pms_next = CurTime() + 0.15
@@ -93,7 +108,8 @@ net.Receive("ZC_PMS_Armor", function(len, ply)
 end)
 
 net.Receive("ZC_PMS_Reset", function(len, ply)
-	if not CanUse(ply) then return end
+	if not HasAccess(ply) then return end
+	if not ModeAllowed() then NotAllowedMsg(ply) return end
 	if not ply:Alive() then return end
 
 	hg.PMSOverrides[ply:SteamID64()] = nil
@@ -107,14 +123,21 @@ hook.Add("PlayerSpawn", "ZC_PMS_PersistAppearance", function(ply)
 	if not data then return end
 
 	timer.Simple(0, function()
-		if not IsValid(ply) then return end
+		if not IsValid(ply) or not ply:Alive() then return end
+		if hg.PMSOverrides[ply:SteamID64()] ~= data then return end
+		if not CanUse(ply) then return end
 		ApplyPMSOverride(ply, data)
 	end)
 end)
 
 local function OpenSelector(ply)
-	if not CanUse(ply) then
+	if not HasAccess(ply) then
 		if IsValid(ply) then ply:ChatPrint("You don't have access") end
+		return
+	end
+
+	if not ModeAllowed() then
+		NotAllowedMsg(ply)
 		return
 	end
 
